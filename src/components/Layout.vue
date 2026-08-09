@@ -3,7 +3,7 @@ import { ref, h } from 'vue'
 import type { Component } from 'vue'
 import { 
   NLayout, NLayoutHeader, NLayoutSider, NLayoutContent, NLayoutFooter,
-  NMenu, NSwitch, NSpace, NText, NIcon
+  NMenu, NSwitch, NSpace, NText, NIcon, NButton
 } from 'naive-ui'
 import { 
   HomeOutline as HomeIcon,
@@ -11,7 +11,7 @@ import {
   SettingsOutline as SettingsIcon
 } from '@vicons/ionicons5'
 
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 function renderIcon (icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) })
@@ -36,7 +36,13 @@ const menuOptions = [
 ]
 
 const route = useRoute()
+const router = useRouter()
 const isSidebar = ref(true)
+
+const handleLogout = () => {
+  localStorage.removeItem('isAuthenticated')
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -48,7 +54,11 @@ const isSidebar = ref(true)
         <n-menu v-if="!isSidebar" :value="route.path" mode="horizontal" :options="menuOptions" />
       </div>
       
-      <div style="width: 200px;"></div>
+      <div style="width: 200px; display: flex; justify-content: flex-end;">
+        <n-button quaternary type="error" @click="handleLogout">
+          退出登录
+        </n-button>
+      </div>
     </n-layout-header>
 
     <n-layout has-sider style="height: calc(100vh - 64px - 50px);">
