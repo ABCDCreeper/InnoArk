@@ -83,22 +83,26 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
       <n-button v-if="isMobile" quaternary size="small" @click="mobileMenuOpen = true">
         <template #icon><n-icon size="22"><menu-icon /></n-icon></template>
       </n-button>
-      <span class="app-logo">智创方舟 InnoArk</span>
+      <div class="app-logo">
+        <span class="logo-icon">🚀</span>
+        <span class="logo-cn">智创方舟</span>
+        <span class="logo-en">InnoArk</span>
+      </div>
 
       <div class="header-menu-area">
         <n-menu v-if="!settings.sidebarMode && !isMobile" :value="menuKey" mode="horizontal" :options="menuOptions" />
       </div>
 
-      <n-space align="center" class="header-user-area">
+      <div class="header-user-area">
         <n-popover trigger="click">
           <template #trigger>
-            <n-space align="center" style="cursor: pointer;">
+            <div class="user-trigger">
               <n-avatar round size="small" :style="{ backgroundColor: auth.isTeacher ? '#f0a020' : '#18a058' }">
                 <n-icon><person-icon /></n-icon>
               </n-avatar>
-              <n-text class="user-name">{{ auth.user?.name }}</n-text>
+              <span class="user-name">{{ auth.user?.name }}</span>
               <n-tag size="small" :type="roleType" :bordered="false">{{ roleLabel }}</n-tag>
-            </n-space>
+            </div>
           </template>
           <n-space vertical>
             <n-text depth="3">账号：{{ auth.user?.username }}</n-text>
@@ -108,7 +112,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
             </n-button>
           </n-space>
         </n-popover>
-      </n-space>
+      </div>
     </n-layout-header>
 
     <n-layout has-sider style="height: calc(100vh - 64px - 50px);">
@@ -136,12 +140,6 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 </template>
 
 <style>
-@media (max-width: 768px) {
-  .user-name {
-    display: none;
-  }
-}
-
 .app-header {
   height: 64px;
   padding: 0 12px;
@@ -151,24 +149,60 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 }
 
 .app-logo {
-  font-size: 18px;
-  font-weight: 800;
-  white-space: nowrap;
-  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex-shrink: 0;
+  text-decoration: none;
+}
+
+.logo-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.logo-cn {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--n-text-color);
+  letter-spacing: 1px;
+}
+
+.logo-en {
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--n-text-color-3);
+  letter-spacing: 0.5px;
+  margin-left: 2px;
 }
 
 .header-menu-area {
   flex: 1;
   display: flex;
   justify-content: center;
+  align-items: center;
   min-width: 0;
+  height: 100%;
+}
+
+.header-menu-area .n-menu {
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
 
 .header-user-area {
   margin-left: auto;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
+}
+
+.user-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
 }
 
 @media (min-width: 769px) {
@@ -176,8 +210,23 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
     padding: 0 32px;
     gap: 24px;
   }
-  .app-logo {
+  .logo-cn {
     font-size: 20px;
+  }
+  .logo-en {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .user-name {
+    display: none;
+  }
+  .logo-en {
+    display: none;
+  }
+  .logo-icon {
+    font-size: 18px;
   }
 }
 </style>
