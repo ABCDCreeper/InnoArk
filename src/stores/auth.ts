@@ -1,0 +1,45 @@
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
+import { login as apiLogin, logout as apiLogout } from '../api/auth'
+import type { User } from '../api/types'
+
+const TOKEN_KEY = 'innoark_token'
+const USER_KEY = 'innoark_user'
+
+function loadUser(): User | null {
+  try {
+    return JSON.parse(localStorage.getItem(USER_KEY) || 'null')
+  } catch {
+    return null
+  }
+}
+
+export const useAuthStore = defineStore('auth', () => {
+  const token = ref<string | null>(localStorage.getItem(TOKEN_KEY))
+  const user = ref<User | null>(loadUser())
+
+  const isAuthenticated = computed(() => !!token.value)
+  const isTeacher = computed(() => user.value?.role === 'teacher')
+
+  async function login(username: string, password: string) {
+    const res = await apiLogin(username, password)
+    token.value = res.token
+    user.value = res.user
+    localStorage.setItem(TOKEN_KEY, res.token)
+    localStorage.setItem(USER_KEY, JSON.stringify(res.user))
+  }
+
+  async function logout() {
+    try {
+      await apiLogout()
+    } catch {
+      // 忽略登出接口异常，本地状态照常清理
+    }
+    token.value = null
+    user.value = null
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(USER_KEY)
+  }
+
+  return { token, user, isAuthenticated, isTeacher, login, logout }
+})

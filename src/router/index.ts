@@ -1,50 +1,52 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('../views/Login.vue')
+    component: () => import('../views/Login.vue'),
   },
   {
     path: '/',
     component: () => import('../components/Layout.vue'),
     meta: { requiresAuth: true },
     children: [
+      { path: '', name: 'Home', component: () => import('../views/Home.vue') },
+      { path: 'projects', name: 'Projects', component: () => import('../views/Projects.vue') },
+      { path: 'project/:id', name: 'ProjectDetail', component: () => import('../views/ProjectDetail.vue'), props: true },
+      { path: 'resources', name: 'Resources', component: () => import('../views/Resources.vue') },
+      { path: 'focus', name: 'Focus', component: () => import('../views/Focus.vue') },
       {
-        path: '',
-        name: 'Home',
-        component: () => import('../views/Home.vue')
+        path: 'teacher',
+        name: 'TeacherBoard',
+        component: () => import('../views/TeacherBoard.vue'),
+        meta: { roles: ['teacher'] },
       },
-      {
-        path: 'about',
-        name: 'About',
-        component: () => import('../views/About.vue')
-      },
-      {
-        path: 'settings',
-        name: 'Settings',
-        component: () => import('../views/Settings.vue')
-      }
-    ]
-  }
+      { path: 'settings', name: 'Settings', component: () => import('../views/Settings.vue') },
+      { path: 'about', name: 'About', component: () => import('../views/About.vue') },
+    ],
+  },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
 })
 
-router.beforeEach((to, _from, next) => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
-  
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    next({ name: 'Login', query: { redirect: to.fullPath } })
-  } else if (to.name === 'Login' && isAuthenticated) {
-    next({ name: 'Home' })
-  } else {
-    next()
+router.beforeEach((to) => {
+  const auth = useAuthStore()
+  if (to.meta.requiresAuth && !auth.isAuthenticated) {
+    return { name: 'Login', query: { redirect: to.fullPath } }
   }
+  if (to.name === 'Login' && auth.isAuthenticated) {
+    return { name: 'Home' }
+  }
+  const roles = to.meta.roles as string[] | undefined
+  if (roles && !roles.includes(auth.user?.role ?? '')) {
+    return { name: 'Home' }
+  }
+  return true
 })
 
 export default router
