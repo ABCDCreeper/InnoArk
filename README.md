@@ -20,13 +20,13 @@
 ## 技术栈
 
 - 前端：Vue 3.5 + TypeScript + Vite + Naive UI + Pinia + Vue Router
-- 后端：**未实现**（预留接口，见下文 API 契约）
+- 后端：**ArkEngine**（Flask + SQLite）— 仓库：[https://github.com/ABCDCreeper/ArkEngine](https://github.com/ABCDCreeper/ArkEngine)
 
 ## 快速开始
 
 ```bash
 yarn install
-yarn dev        # 启动开发服务器（内置 Mock API，无需后端）
+yarn dev        # 启动开发服务器（/api 代理到 ArkEngine 后端）
 yarn build      # 类型检查 + 生产构建
 ```
 
@@ -38,24 +38,13 @@ yarn build      # 类型检查 + 生产构建
 | 学生 2 | `student2` | `123456` |
 | 教师 | `teacher` | `123456` |
 
-## 后端 API 契约
+## 后端 ArkEngine
 
+- 后端仓库：**[ABCDCreeper/ArkEngine](https://github.com/ABCDCreeper/ArkEngine)**（Flask + SQLite）
 - 接口规范（RESTful：状态码、鉴权、错误码、数据模型）：**[docs/api.md](./docs/api.md)**
 - 前端 API 层位于 `src/api/`，全部按契约实现
-- 开发阶段由 `mock/`（Vite 中间件）提供模拟数据，数据持久化在 `.mock-data/db.json`（不入库）
-
-### 接入真实后端
-
-1. 按 [docs/api.md](./docs/api.md) 实现后端（建议 Flask/Django，见文档第 5 节）；
-2. 在 `vite.config.ts` 移除 `mockPlugin()`，并配置代理：
-
-```ts
-server: {
-  proxy: { '/api': { target: 'http://localhost:5000', changeOrigin: true } }
-}
-```
-
-前端代码无需任何改动。
+- `vite.config.ts` 已配置 `/api` 代理到 `http://localhost:5000`，前端无需改动即可对接
+- 如需离线调试，可恢复 `mock/`（Vite 中间件）内置模拟数据，数据持久化在 `.mock-data/db.json`（不入库）
 
 ## 项目结构
 
