@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import {
   NCard, NButton, NTag, NSpace, NText, NProgress, NModal, NInput,
   NDatePicker, NTimeline, NTimelineItem, NIcon, NEmpty, useMessage, useDialog,
@@ -31,10 +31,19 @@ const COLUMNS: Array<{ status: TaskStatus; title: string; color: 'default' | 'wa
 const nameOf = (userId: string | null) => props.members.find((m) => m.id === userId)?.name ?? '未认领'
 const myId = () => JSON.parse(localStorage.getItem('innoark_user') || 'null')?.id as string | undefined
 
+const cardH = ref(130)
+
+async function measureCard() {
+  await nextTick()
+  const el = document.querySelector('.board-col .task-card')
+  if (el) cardH.value = el.getBoundingClientRect().height
+}
+
 async function load() {
   const [taskList, logList] = await Promise.all([fetchTasks(props.projectId), fetchTaskLogs(props.projectId)])
   tasks.value = taskList.items
   logs.value = logList.items
+  await measureCard()
 }
 
 onMounted(load)
@@ -162,7 +171,7 @@ const logName = (userId: string) => props.members.find((m) => m.id === userId)?.
       </n-space>
     </n-card>
 
-    <div class="board">
+    <div class="board" :style="{ '--card-h': cardH + 'px' }">
       <div
         v-for="col in COLUMNS"
         :key="col.status"
@@ -174,30 +183,32 @@ const logName = (userId: string) => props.members.find((m) => m.id === userId)?.
           {{ col.title }}
           <n-tag size="small" :bordered="false" :type="col.color" style="margin-left: 6px;">{{ tasksOf(col.status).length }}</n-tag>
         </n-text>
-        <n-empty v-if="tasksOf(col.status).length === 0" description="" size="small" style="padding: 12px 0;" />
-        <div
-          v-for="task in tasksOf(col.status)"
-          :key="task.id"
-          class="task-card"
-          draggable="true"
-          @dragstart="onDragStart(task.id)"
-          @click="editable && openEdit(task)"
-        >
-          <n-text style="font-size: 13px; font-weight: 500;">{{ task.title }}</n-text>
-          <n-text v-if="task.description" depth="3" style="font-size: 12px;">{{ task.description }}</n-text>
-          <n-space align="center" justify="space-between" style="margin-top: 8px;">
-            <n-tag size="tiny" :bordered="false" :type="task.assigneeId ? 'success' : 'default'">{{ nameOf(task.assigneeId) }}</n-tag>
-            <n-text v-if="task.dueDate" depth="3" style="font-size: 11px;">截止 {{ formatDue(task.dueDate) }}</n-text>
-          </n-space>
-          <n-button
-            v-if="editable && task.status !== 'done'"
-            size="tiny"
-            text
-            type="primary"
-            @click.stop="toggleClaim(task)"
+        <div class="task-list">
+          <n-empty v-if="tasksOf(col.status).length === 0" description="" size="small" style="padding: 12px 0;" />
+          <div
+            v-for="task in tasksOf(col.status)"
+            :key="task.id"
+            class="task-card"
+            draggable="true"
+            @dragstart="onDragStart(task.id)"
+            @click="editable && openEdit(task)"
           >
-            {{ task.assigneeId ? '取消认领' : '认领任务' }}
-          </n-button>
+            <n-text style="font-size: 13px; font-weight: 500;">{{ task.title }}</n-text>
+            <n-text v-if="task.description" depth="3" style="font-size: 12px;">{{ task.description }}</n-text>
+            <n-space align="center" justify="space-between" style="margin-top: 8px;">
+              <n-tag size="tiny" :bordered="false" :type="task.assigneeId ? 'success' : 'default'">{{ nameOf(task.assigneeId) }}</n-tag>
+              <n-text v-if="task.dueDate" depth="3" style="font-size: 11px;">截止 {{ formatDue(task.dueDate) }}</n-text>
+            </n-space>
+            <n-button
+              v-if="editable && task.status !== 'done'"
+              size="tiny"
+              text
+              type="primary"
+              @click.stop="toggleClaim(task)"
+            >
+              {{ task.assigneeId ? '取消认领' : '认领任务' }}
+            </n-button>
+          </div>
         </div>
       </div>
     </div>
@@ -245,6 +256,12 @@ const logName = (userId: string) => props.members.find((m) => m.id === userId)?.
   border-radius: 10px;
   padding: 12px;
   min-height: 200px;
+}
+
+.task-list {
+  min-height: var(--card-h, 130px);
+  max-height: calc(var(--card-h, 130px) * 2.5);
+  overflow-y: auto;
 }
 
 .task-card {

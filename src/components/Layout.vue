@@ -34,7 +34,7 @@ const studentMenu: MenuDef[] = [
   { key: '/', title: '首页', icon: HomeIcon },
   { key: '/projects', title: '项目', icon: RocketIcon },
   { key: '/resources', title: '资源库', icon: CompassIcon },
-  { key: '/focus', title: '专注模式', icon: TimerIcon },
+  { key: '/focus', title: '专注', icon: TimerIcon },
   { key: '/settings', title: '设置', icon: SettingsIcon },
   { key: '/about', title: '关于', icon: AboutIcon },
 ]

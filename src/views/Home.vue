@@ -32,7 +32,7 @@ onMounted(async () => {
 const quickLinks = [
   { label: '课题与项目', desc: '浏览课题、发起项目、组建小队', to: '/projects', icon: RocketOutline },
   { label: '资源库', desc: '跨学科资源导航与动态反馈', to: '/resources', icon: CompassOutline },
-  { label: '专注模式', desc: '番茄钟 + 白板，沉浸式学习', to: '/focus', icon: TimerOutline },
+  { label: '专注', desc: '番茄钟 + 白板，沉浸式学习', to: '/focus', icon: TimerOutline },
 ]
 
 const teacherLinks = [

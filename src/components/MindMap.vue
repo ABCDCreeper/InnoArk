@@ -18,6 +18,7 @@ const emit = defineEmits<{
 const LEVEL_GAP = 220
 const NODE_H = 34
 const LEAF_GAP = 46
+const PAD_X = 24
 
 const layout = computed(() => {
   const byParent = new Map<string, MindNode[]>()
@@ -41,14 +42,14 @@ const layout = computed(() => {
       const ys = children.map((c) => pos.get(c.id)!.y)
       y = (Math.min(...ys) + Math.max(...ys)) / 2
     }
-    pos.set(node.id, { x: depth * LEVEL_GAP, y })
+    pos.set(node.id, { x: depth * LEVEL_GAP + PAD_X, y })
   }
   ;(byParent.get('') ?? []).forEach((root) => build(root, 0))
   return { pos, leafCount: Math.max(leafCursor, 1), maxDepth }
 })
 
 const nodeWidth = (label: string) => Math.min(Math.max(label.length * 15 + 28, 64), 260)
-const svgWidth = computed(() => layout.value.maxDepth * LEVEL_GAP + 320)
+const svgWidth = computed(() => layout.value.maxDepth * LEVEL_GAP + PAD_X + 320)
 const svgHeight = computed(() => layout.value.leafCount * LEAF_GAP + 40)
 
 const paths = computed(() => {
