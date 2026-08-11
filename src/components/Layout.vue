@@ -144,6 +144,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
   display: flex;
   align-items: center;
   gap: 12px;
+  position: relative;
 }
 
 .app-logo {
@@ -163,7 +164,9 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 }
 
 .header-menu-area {
-  flex: 1;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   justify-content: center;
   align-items: center;
