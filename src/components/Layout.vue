@@ -20,6 +20,7 @@ import {
 
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useSettingsStore } from '../stores/settings'
 import FloatingPomodoro from './FloatingPomodoro.vue'
 
 const route = useRoute()
@@ -63,6 +64,7 @@ const handleLogout = async () => {
 }
 
 const isSidebar = ref(true)
+const settings = useSettingsStore()
 const mobileMenuOpen = ref(false)
 const isMobile = ref(false)
 
@@ -113,13 +115,22 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
     </n-layout-header>
 
     <n-layout has-sider style="height: calc(100vh - 64px - 50px);">
-      <n-layout-sider v-if="isSidebar && !isMobile" bordered collapse-mode="width" :collapsed-width="64" :width="220" show-trigger>
-        <n-menu :value="menuKey" :options="menuOptions" />
-      </n-layout-sider>
-
-      <n-layout-content content-style="padding: 16px; overflow-y: auto;">
-        <router-view />
-      </n-layout-content>
+      <template v-if="settings.sidebarPlacement === 'left'">
+        <n-layout-sider v-if="isSidebar && !isMobile" bordered collapse-mode="width" :collapsed-width="64" :width="220" show-trigger>
+          <n-menu :value="menuKey" :options="menuOptions" />
+        </n-layout-sider>
+        <n-layout-content content-style="padding: 16px; overflow-y: auto;">
+          <router-view />
+        </n-layout-content>
+      </template>
+      <template v-else>
+        <n-layout-content content-style="padding: 16px; overflow-y: auto;">
+          <router-view />
+        </n-layout-content>
+        <n-layout-sider v-if="isSidebar && !isMobile" bordered collapse-mode="width" :collapsed-width="64" :width="220" show-trigger>
+          <n-menu :value="menuKey" :options="menuOptions" />
+        </n-layout-sider>
+      </template>
     </n-layout>
 
     <n-layout-footer bordered style="height: 50px; display: flex; align-items: center; justify-content: center;">
