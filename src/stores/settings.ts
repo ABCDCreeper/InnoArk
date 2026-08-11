@@ -3,21 +3,21 @@ import { ref, watch } from 'vue'
 
 const STORAGE_KEY = 'innoark_settings'
 
-function loadSettings(): { sidebarPlacement: 'left' | 'right' } {
+function loadSettings(): { sidebarMode: boolean } {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) return JSON.parse(raw)
   } catch { /* ignore */ }
-  return { sidebarPlacement: 'left' }
+  return { sidebarMode: true }
 }
 
 export const useSettingsStore = defineStore('settings', () => {
   const saved = loadSettings()
-  const sidebarPlacement = ref<'left' | 'right'>(saved.sidebarPlacement)
+  const sidebarMode = ref<boolean>(saved.sidebarMode)
 
-  watch(sidebarPlacement, (val) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ sidebarPlacement: val }))
+  watch(sidebarMode, (val) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ sidebarMode: val }))
   })
 
-  return { sidebarPlacement }
+  return { sidebarMode }
 })

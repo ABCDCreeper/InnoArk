@@ -26,6 +26,7 @@ import FloatingPomodoro from './FloatingPomodoro.vue'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const settings = useSettingsStore()
 
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) })
@@ -63,19 +64,15 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
-const isSidebar = ref(true)
-const settings = useSettingsStore()
-const mobileMenuOpen = ref(false)
 const isMobile = ref(false)
+const mobileMenuOpen = ref(false)
 
 function checkMobile() {
   isMobile.value = window.innerWidth < 768
-  if (isMobile.value) isSidebar.value = false
 }
 
-onMounted(checkMobile)
-
 function onResize() { checkMobile() }
+onMounted(checkMobile)
 onMounted(() => window.addEventListener('resize', onResize))
 onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 </script>
@@ -89,7 +86,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
       <n-text strong style="font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">智创方舟 InnoArk</n-text>
 
       <div style="flex: 1; display: flex; justify-content: center; min-width: 0;">
-        <n-menu v-if="!isSidebar && !isMobile" :value="menuKey" mode="horizontal" :options="menuOptions" style="justify-content: center;" />
+        <n-menu v-if="!settings.sidebarMode && !isMobile" :value="menuKey" mode="horizontal" :options="menuOptions" style="justify-content: center;" />
       </div>
 
       <n-space align="center" style="margin-left: auto; white-space: nowrap; flex-shrink: 0;">
@@ -115,22 +112,13 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
     </n-layout-header>
 
     <n-layout has-sider style="height: calc(100vh - 64px - 50px);">
-      <template v-if="settings.sidebarPlacement === 'left'">
-        <n-layout-sider v-if="isSidebar && !isMobile" bordered collapse-mode="width" :collapsed-width="64" :width="220" show-trigger>
-          <n-menu :value="menuKey" :options="menuOptions" />
-        </n-layout-sider>
-        <n-layout-content content-style="padding: 16px; overflow-y: auto;">
-          <router-view />
-        </n-layout-content>
-      </template>
-      <template v-else>
-        <n-layout-content content-style="padding: 16px; overflow-y: auto;">
-          <router-view />
-        </n-layout-content>
-        <n-layout-sider v-if="isSidebar && !isMobile" bordered collapse-mode="width" :collapsed-width="64" :width="220" show-trigger>
-          <n-menu :value="menuKey" :options="menuOptions" />
-        </n-layout-sider>
-      </template>
+      <n-layout-sider v-if="settings.sidebarMode && !isMobile" bordered collapse-mode="width" :collapsed-width="64" :width="220" show-trigger>
+        <n-menu :value="menuKey" :options="menuOptions" />
+      </n-layout-sider>
+
+      <n-layout-content content-style="padding: 16px; overflow-y: auto;">
+        <router-view />
+      </n-layout-content>
     </n-layout>
 
     <n-layout-footer bordered style="height: 50px; display: flex; align-items: center; justify-content: center;">
