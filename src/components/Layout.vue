@@ -84,9 +84,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
         <template #icon><n-icon size="22"><menu-icon /></n-icon></template>
       </n-button>
       <div class="app-logo">
-        <span class="logo-icon">🚀</span>
-        <span class="logo-cn">智创方舟</span>
-        <span class="logo-en">InnoArk</span>
+        <span class="logo-text">InnoArk</span>
       </div>
 
       <div class="header-menu-area">
@@ -151,29 +149,17 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 .app-logo {
   display: flex;
   align-items: center;
-  gap: 6px;
   flex-shrink: 0;
-  text-decoration: none;
 }
 
-.logo-icon {
-  font-size: 22px;
-  line-height: 1;
-}
-
-.logo-cn {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--n-text-color);
+.logo-text {
+  font-size: 20px;
+  font-weight: 800;
   letter-spacing: 1px;
-}
-
-.logo-en {
-  font-size: 14px;
-  font-weight: 300;
-  color: var(--n-text-color-3);
-  letter-spacing: 0.5px;
-  margin-left: 2px;
+  background: linear-gradient(135deg, #18a058, #2080f0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .header-menu-area {
@@ -210,11 +196,8 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
     padding: 0 32px;
     gap: 24px;
   }
-  .logo-cn {
-    font-size: 20px;
-  }
-  .logo-en {
-    font-size: 15px;
+  .logo-text {
+    font-size: 22px;
   }
 }
 
@@ -222,11 +205,8 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
   .user-name {
     display: none;
   }
-  .logo-en {
-    display: none;
-  }
-  .logo-icon {
-    font-size: 18px;
+  .app-logo {
+    flex: 1;
   }
 }
 </style>
