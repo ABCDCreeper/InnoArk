@@ -62,7 +62,7 @@ const handleRegister = async () => {
 
 <template>
   <div class="register-container">
-    <n-card title="注册 InnoArk" subtitle="虫洞·星桥 智能跨学科学习平台" class="register-card" size="large">
+    <n-card title="注册 InnoArk" subtitle="智能跨学科学习平台" class="register-card" size="large">
       <n-form :model="formValue" :rules="rules" label-placement="top" @submit.prevent="handleRegister">
         <n-form-item path="name" label="姓名">
           <n-input v-model:value="formValue.name" placeholder="请输入真实姓名" />

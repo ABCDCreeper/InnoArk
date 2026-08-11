@@ -59,7 +59,7 @@ const greeting = () => {
         <div>
           <n-text style="font-size: 22px; font-weight: 600;">{{ greeting() }}，{{ auth.user?.name }}</n-text>
           <div style="margin-top: 6px;">
-            <n-text depth="3">{{ auth.isTeacher ? '欢迎回到教师工作台，查看学生团队的实时进度。' : '欢迎回到「虫洞·星桥」，今天也一起向星际出发吧。' }}</n-text>
+            <n-text depth="3">{{ auth.isTeacher ? '欢迎回到教师工作台，查看学生团队的实时进度。' : '欢迎回到「智创方舟 InnoArk」，今天也一起向星际出发吧。' }}</n-text>
           </div>
         </div>
         <n-space v-if="!auth.isTeacher" size="large">

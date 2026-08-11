@@ -1,4 +1,4 @@
-# InnoArk「虫洞·星桥」RESTful API 文档
+# InnoArk「智创方舟」RESTful API 文档
 
 > 智能跨学科项目式学习协同平台 — 后端接口契约文档
 > 前端已按本文档实现全部调用；开发阶段由 `mock/`（Vite 中间件）模拟响应，替换为真实后端时关闭 mock 插件即可。

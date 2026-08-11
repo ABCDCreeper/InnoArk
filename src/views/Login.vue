@@ -48,7 +48,7 @@ const switchRole = (value: string) => {
 
 <template>
   <div class="login-container">
-    <n-card title="智创方舟 InnoArk" subtitle="虫洞·星桥 智能跨学科学习平台" class="login-card" size="large">
+    <n-card title="智创方舟 InnoArk" subtitle="智能跨学科学习平台" class="login-card" size="large">
       <n-tabs v-model:value="role" type="line" animated @update:value="switchRole">
         <n-tab-pane name="student" tab="学生">
           <n-form :model="formValue" :rules="rules" @submit.prevent="handleLogin">

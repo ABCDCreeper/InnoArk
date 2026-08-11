@@ -1,17 +1,16 @@
 <script setup lang="ts">
-import { NCard, NSpace, NText, NTag, NGrid, NGridItem, NList, NListItem, NThing } from 'naive-ui'
+import { NCard, NSpace, NText, NGrid, NGridItem, NList, NListItem, NThing } from 'naive-ui'
 </script>
 
 <template>
   <n-space vertical size="large">
     <n-card>
       <n-space align="center">
-        <n-text style="font-size: 22px; font-weight: 600;">关于「虫洞·星桥」</n-text>
-        <n-tag size="small" :bordered="false" type="info">智创方舟 InnoArk</n-tag>
+        <n-text style="font-size: 22px; font-weight: 600;">关于智创方舟 InnoArk</n-text>
       </n-space>
       <div style="margin-top: 12px;">
         <n-text depth="3" style="line-height: 1.9;">
-          「虫洞·星桥」是面向上海市青少年科创体验中心（"虫洞"）中小学生的智能跨学科项目式学习（PBL）协同平台。
+          「智创方舟 InnoArk」是面向上海市青少年科创体验中心中小学生的智能跨学科项目式学习（PBL）协同平台。
           针对现有在线学习工具"单向传授、互动不足、反馈滞后"三大痛点，平台以团队协作与过程性评价为核心，
           帮助学生把复杂科创项目拆解为可执行的任务，在创意看板中碰撞灵感，在专注模式中沉浸探索，
           在动态反馈中持续成长，最终沉淀为一份完整的科创档案。
