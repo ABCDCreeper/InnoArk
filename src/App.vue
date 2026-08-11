@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { NConfigProvider, NGlobalStyle, darkTheme, useOsTheme, NMessageProvider, NDialogProvider, NNotificationProvider } from 'naive-ui'
+import { useSettingsStore } from './stores/settings'
 
 const osTheme = useOsTheme()
-const theme = computed(() => (osTheme.value === 'dark' ? darkTheme : null))
+const settings = useSettingsStore()
+const theme = computed(() => {
+  if (settings.theme === 'dark') return darkTheme
+  if (settings.theme === 'light') return null
+  return osTheme.value === 'dark' ? darkTheme : null
+})
 </script>
 
 <template>
