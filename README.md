@@ -1,9 +1,5 @@
 # 智创方舟 InnoArk
 
-智能跨学科项目式学习协同平台（上海未来工程师大赛 · 软件工程师赛项项目）。
-
-依据《项目申报书：智能跨学科学习平台》实现，面向"虫洞"科创体验中心的中小学生与指导教师，支持团队协同创新、过程性评价与沉浸式学习。
-
 ## 核心功能
 
 | 模块 | 说明 |
@@ -22,38 +18,12 @@
 - 前端：Vue 3.5 + TypeScript + Vite + Naive UI + Pinia + Vue Router
 - 后端：**ArkEngine**（Flask + SQLite）— 仓库：[https://github.com/ABCDCreeper/ArkEngine](https://github.com/ABCDCreeper/ArkEngine)
 
-## 快速开始
+## 运行与部署
 
 ```bash
 yarn install
-yarn dev        # 启动开发服务器（/api 代理到 ArkEngine 后端）
+yarn dev        # 开发服务器（/api 代理到 ArkEngine 后端）
 yarn build      # 类型检查 + 生产构建
 ```
 
-演示账号：
-
-| 身份 | 用户名 | 密码 |
-|---|---|---|
-| 学生 | `student` | `123456` |
-| 学生 2 | `student2` | `123456` |
-| 教师 | `teacher` | `123456` |
-
-## 后端 ArkEngine
-
-- 后端仓库：**[ABCDCreeper/ArkEngine](https://github.com/ABCDCreeper/ArkEngine)**（Flask + SQLite）
-- 接口规范（RESTful：状态码、鉴权、错误码、数据模型）：**[docs/api.md](./docs/api.md)**
-- 前端 API 层位于 `src/api/`，全部按契约实现
-- `vite.config.ts` 已配置 `/api` 代理到 `http://localhost:5000`，前端无需改动即可对接
-- 如需离线调试，可恢复 `mock/`（Vite 中间件）内置模拟数据，数据持久化在 `.mock-data/db.json`（不入库）
-
-## 项目结构
-
-```
-src/
-  api/          # API 层（request 封装 + 分模块接口 + 类型定义）
-  components/   # Layout / MindMap / StickyNotes / Pomodoro / CanvasWhiteboard / WeeklyBar
-  stores/       # Pinia（auth）
-  views/        # 页面（Home / Projects / ProjectDetail / Resources / Focus / TeacherBoard …）
-mock/           # 开发期 Mock 后端（Vite 中间件）
-docs/api.md     # RESTful API 契约文档
-```
+演示账号：学生 `student/123456`、教师 `teacher/123456`。接口契约见 [docs/api.md](./docs/api.md)。
