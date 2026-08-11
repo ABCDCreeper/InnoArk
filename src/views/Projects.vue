@@ -18,7 +18,7 @@ const topics = ref<Topic[]>([])
 const projects = ref<Project[]>([])
 const loading = ref(false)
 
-const activeTab = ref('topics')
+const activeTab = ref('mine')
 
 async function load() {
   loading.value = true
@@ -99,75 +99,77 @@ async function finishProject(p: Project) {
 </script>
 
 <template>
-  <n-tabs v-model:value="activeTab" type="line">
-    <n-tab-pane name="topics" tab="课题库">
-      <n-space vertical size="large">
-        <n-grid :cols="4" :x-gap="16" :y-gap="16" responsive="screen" item-responsive>
-          <n-grid-item v-for="topic in topics" :key="topic.id" span="4 s:2 l:1">
-            <n-card size="small" hoverable style="height: 100%; display: flex; flex-direction: column;">
-              <n-space vertical>
-                <n-text strong style="font-size: 15px;">{{ topic.title }}</n-text>
-                <n-space size="small">
-                  <n-tag v-for="s in topic.subjects" :key="s" size="small" :bordered="false" type="info">{{ s }}</n-tag>
-                  <n-tag
-                    size="small"
-                    :bordered="false"
-                    :type="topic.difficulty === '挑战' ? 'error' : topic.difficulty === '进阶' ? 'warning' : 'success'"
-                  >
-                    {{ topic.difficulty }}
+  <n-card title="项目">
+    <n-tabs v-model:value="activeTab" type="line">
+      <n-tab-pane name="mine" tab="我的项目">
+        <n-space vertical size="large">
+          <n-space justify="space-between">
+            <n-text depth="3">{{ projects.length }} 个项目</n-text>
+            <n-space>
+              <n-button @click="joinModal = true">邀请码加入</n-button>
+              <n-button type="primary" @click="activeTab = 'topics'">发起项目</n-button>
+            </n-space>
+          </n-space>
+
+          <n-empty v-if="!loading && projects.length === 0" description="还没有参与的项目">
+            <template #extra>
+              <n-button type="primary" @click="activeTab = 'topics'">去课题库发起项目</n-button>
+            </template>
+          </n-empty>
+
+          <n-space vertical v-else size="small">
+            <n-card v-for="p in projects" :key="p.id" size="small" hoverable @click="router.push(`/project/${p.id}`)" style="cursor: pointer;">
+              <n-space align="center" justify="space-between" wrap>
+                <n-space align="center" size="small">
+                  <n-text strong>{{ p.name }}</n-text>
+                  <n-tag size="small" :type="isFinished(p) ? 'default' : 'success'" :bordered="false">
+                    {{ isFinished(p) ? '已结题' : '进行中' }}
                   </n-tag>
+                  <n-tag size="small" :bordered="false" type="primary">邀请码 {{ p.inviteCode }}</n-tag>
                 </n-space>
-                <n-text depth="3" style="font-size: 13px; line-height: 1.6; flex: 1;">{{ topic.summary }}</n-text>
-                <n-button type="primary" block size="small" @click="openCreate(topic)">
-                  <template #icon><n-icon><rocket-outline /></n-icon></template>
-                  以此课题发起项目
-                </n-button>
+                <n-space align="center">
+                  <n-avatar-group :options="p.members.map((m) => ({ name: m.name, src: '' }))" :size="24" />
+                  <n-progress type="line" :percentage="p.progress.total === 0 ? 0 : Math.round((p.progress.done / p.progress.total) * 100)" :height="8" style="width: 120px;" />
+                  <n-text depth="3" style="font-size: 12px;">{{ p.progress.done }}/{{ p.progress.total }}</n-text>
+                  <n-button size="small" type="primary" ghost @click.stop="router.push(`/project/${p.id}`)">进入</n-button>
+                  <n-button v-if="!isFinished(p)" size="small" @click.stop="confirmFinish(p)">结题</n-button>
+                </n-space>
               </n-space>
             </n-card>
-          </n-grid-item>
-        </n-grid>
-      </n-space>
-    </n-tab-pane>
-
-    <n-tab-pane name="mine" tab="我的项目">
-      <n-space vertical size="large">
-        <n-space justify="space-between">
-          <n-text depth="3">{{ projects.length }} 个项目</n-text>
-          <n-space>
-            <n-button @click="joinModal = true">邀请码加入</n-button>
-            <n-button type="primary" @click="activeTab = 'topics'">发起项目</n-button>
           </n-space>
         </n-space>
+      </n-tab-pane>
 
-        <n-empty v-if="!loading && projects.length === 0" description="还没有参与的项目">
-          <template #extra>
-            <n-button type="primary" @click="activeTab = 'topics'">去课题库发起项目</n-button>
-          </template>
-        </n-empty>
-
-        <n-space vertical v-else size="small">
-          <n-card v-for="p in projects" :key="p.id" size="small" hoverable @click="router.push(`/project/${p.id}`)" style="cursor: pointer;">
-            <n-space align="center" justify="space-between" wrap>
-              <n-space align="center" size="small">
-                <n-text strong>{{ p.name }}</n-text>
-                <n-tag size="small" :type="isFinished(p) ? 'default' : 'success'" :bordered="false">
-                  {{ isFinished(p) ? '已结题' : '进行中' }}
-                </n-tag>
-                <n-tag size="small" :bordered="false" type="primary">邀请码 {{ p.inviteCode }}</n-tag>
-              </n-space>
-              <n-space align="center">
-                <n-avatar-group :options="p.members.map((m) => ({ name: m.name, src: '' }))" :size="24" />
-                <n-progress type="line" :percentage="p.progress.total === 0 ? 0 : Math.round((p.progress.done / p.progress.total) * 100)" :height="8" style="width: 120px;" />
-                <n-text depth="3" style="font-size: 12px;">{{ p.progress.done }}/{{ p.progress.total }}</n-text>
-                <n-button size="small" type="primary" ghost @click.stop="router.push(`/project/${p.id}`)">进入</n-button>
-                <n-button v-if="!isFinished(p)" size="small" @click.stop="confirmFinish(p)">结题</n-button>
-              </n-space>
-            </n-space>
-          </n-card>
+      <n-tab-pane name="topics" tab="课题库">
+        <n-space vertical size="large">
+          <n-grid :cols="4" :x-gap="16" :y-gap="16" responsive="screen" item-responsive>
+            <n-grid-item v-for="topic in topics" :key="topic.id" span="4 s:2 l:1">
+              <n-card size="small" hoverable style="height: 100%; display: flex; flex-direction: column;">
+                <n-space vertical>
+                  <n-text strong style="font-size: 15px;">{{ topic.title }}</n-text>
+                  <n-space size="small">
+                    <n-tag v-for="s in topic.subjects" :key="s" size="small" :bordered="false" type="info">{{ s }}</n-tag>
+                    <n-tag
+                      size="small"
+                      :bordered="false"
+                      :type="topic.difficulty === '挑战' ? 'error' : topic.difficulty === '进阶' ? 'warning' : 'success'"
+                    >
+                      {{ topic.difficulty }}
+                    </n-tag>
+                  </n-space>
+                  <n-text depth="3" style="font-size: 13px; line-height: 1.6; flex: 1;">{{ topic.summary }}</n-text>
+                  <n-button type="primary" block size="small" @click="openCreate(topic)">
+                    <template #icon><n-icon><rocket-outline /></n-icon></template>
+                    以此课题发起项目
+                  </n-button>
+                </n-space>
+              </n-card>
+            </n-grid-item>
+          </n-grid>
         </n-space>
-      </n-space>
-    </n-tab-pane>
-  </n-tabs>
+      </n-tab-pane>
+    </n-tabs>
+  </n-card>
 
   <n-modal v-model:show="createModal" preset="card" title="发起项目" style="width: 480px; max-width: 92vw;">
     <n-form label-placement="top">
