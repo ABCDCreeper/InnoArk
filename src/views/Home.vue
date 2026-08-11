@@ -72,13 +72,15 @@ const greeting = () => {
     <n-grid :cols="3" :x-gap="16" :y-gap="16" responsive="screen" item-responsive>
       <n-grid-item v-for="link in links" :key="link.to" span="3 m:1">
         <n-card hoverable size="small" @click="router.push(link.to)" style="cursor: pointer;">
-          <n-space align="center">
-            <n-icon size="28" color="#18a058"><component :is="link.icon" /></n-icon>
-            <div>
-              <n-text strong>{{ link.label }}</n-text>
-              <div><n-text depth="3" style="font-size: 12px;">{{ link.desc }}</n-text></div>
-            </div>
-            <n-icon size="16" depth="3" style="margin-left: auto;"><chevron-forward-outline /></n-icon>
+          <n-space align="center" justify="space-between">
+            <n-space align="center">
+              <n-icon size="28" color="#18a058"><component :is="link.icon" /></n-icon>
+              <div>
+                <n-text strong>{{ link.label }}</n-text>
+                <div><n-text depth="3" style="font-size: 12px;">{{ link.desc }}</n-text></div>
+              </div>
+            </n-space>
+            <n-icon size="16" depth="3"><chevron-forward-outline /></n-icon>
           </n-space>
         </n-card>
       </n-grid-item>
