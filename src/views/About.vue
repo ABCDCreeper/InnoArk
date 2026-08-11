@@ -44,7 +44,7 @@ import { NCard, NSpace, NText, NGrid, NGridItem, NList, NListItem, NThing } from
               <n-thing title="前端" description="Vue 3 + TypeScript + Naive UI + Pinia，响应式单页应用" />
             </n-list-item>
             <n-list-item>
-              <n-thing title="后端（预留）" description="Python Flask / Django，RESTful API，详见 docs/api.md" />
+              <n-thing title="后端" description="Python Flask，RESTful API，详见 docs/api.md" />
             </n-list-item>
             <n-list-item>
               <n-thing title="数据库" description="MySQL / SQLite：用户、项目进度、团队协作内容" />
