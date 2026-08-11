@@ -79,17 +79,17 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 
 <template>
   <n-layout style="height: 100vh;">
-    <n-layout-header bordered style="height: 64px; padding: 0 12px; display: flex; align-items: center; gap: 8px;">
+    <n-layout-header bordered class="app-header">
       <n-button v-if="isMobile" quaternary size="small" @click="mobileMenuOpen = true">
         <template #icon><n-icon size="22"><menu-icon /></n-icon></template>
       </n-button>
-      <n-text strong style="font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">智创方舟 InnoArk</n-text>
+      <span class="app-logo">智创方舟 InnoArk</span>
 
-      <div style="flex: 1; display: flex; justify-content: center; min-width: 0;">
-        <n-menu v-if="!settings.sidebarMode && !isMobile" :value="menuKey" mode="horizontal" :options="menuOptions" style="justify-content: center;" />
+      <div class="header-menu-area">
+        <n-menu v-if="!settings.sidebarMode && !isMobile" :value="menuKey" mode="horizontal" :options="menuOptions" />
       </div>
 
-      <n-space align="center" style="margin-left: auto; white-space: nowrap; flex-shrink: 0;">
+      <n-space align="center" class="header-user-area">
         <n-popover trigger="click">
           <template #trigger>
             <n-space align="center" style="cursor: pointer;">
@@ -139,6 +139,45 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 @media (max-width: 768px) {
   .user-name {
     display: none;
+  }
+}
+
+.app-header {
+  height: 64px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-logo {
+  font-size: 18px;
+  font-weight: 800;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.header-menu-area {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.header-user-area {
+  margin-left: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (min-width: 769px) {
+  .app-header {
+    padding: 0 32px;
+    gap: 24px;
+  }
+  .app-logo {
+    font-size: 20px;
   }
 }
 </style>
