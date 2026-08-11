@@ -124,6 +124,22 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
     },
   },
   {
+    method: 'POST',
+    pattern: /^\/api\/users$/,
+    public: true,
+    handler: (ctx) => {
+      const { username, password, name, role } = ctx.body
+      if (!username || !password || !name) throw badRequest('用户名、密码和姓名不能为空')
+      if (String(username).length < 3) throw badRequest('用户名至少 3 个字符')
+      if (String(password).length < 6) throw badRequest('密码至少 6 个字符')
+      if (role !== 'student' && role !== 'teacher') throw badRequest('角色只能是 student 或 teacher')
+      if (ctx.db.users.some((u) => u.username === username)) throw new HttpError(409, 'USERNAME_TAKEN', '用户名已被占用')
+      const user: User = { id: genId('u'), username, password, name, role }
+      ctx.db.users.push(user)
+      return { status: 201, body: { token: createToken(user.id), user: userBrief(user) } }
+    },
+  },
+  {
     method: 'DELETE',
     pattern: /^\/api\/sessions\/current$/,
     handler: () => ({ status: 204 }),

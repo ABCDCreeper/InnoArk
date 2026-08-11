@@ -8,6 +8,11 @@ const routes = [
     component: () => import('../views/Login.vue'),
   },
   {
+    path: '/register',
+    name: 'Register',
+    component: () => import('../views/Register.vue'),
+  },
+  {
     path: '/',
     component: () => import('../components/Layout.vue'),
     meta: { requiresAuth: true },
@@ -39,7 +44,7 @@ router.beforeEach((to) => {
   if (to.meta.requiresAuth && !auth.isAuthenticated) {
     return { name: 'Login', query: { redirect: to.fullPath } }
   }
-  if (to.name === 'Login' && auth.isAuthenticated) {
+  if ((to.name === 'Login' || to.name === 'Register') && auth.isAuthenticated) {
     return { name: 'Home' }
   }
   const roles = to.meta.roles as string[] | undefined

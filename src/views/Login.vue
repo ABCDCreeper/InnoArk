@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { NCard, NForm, NFormItem, NInput, NButton, NSpace, NTabs, NTabPane, useMessage } from 'naive-ui'
+import { NCard, NForm, NFormItem, NInput, NButton, NSpace, NTabs, NTabPane, NText, NA, useMessage } from 'naive-ui'
 import { useAuthStore } from '../stores/auth'
 import { ApiError } from '../api/request'
 
@@ -91,6 +91,12 @@ const switchRole = (value: string) => {
       </n-tabs>
       <n-space justify="center" style="margin-top: 12px;">
         <n-text depth="3" style="font-size: 12px;">演示账号：student/123456 · teacher/123456</n-text>
+      </n-space>
+      <n-space justify="center" style="margin-top: 4px;">
+        <n-text depth="3" style="font-size: 13px;">
+          没有账号？
+          <n-a @click="router.push('/register')">立即注册</n-a>
+        </n-text>
       </n-space>
     </n-card>
   </div>

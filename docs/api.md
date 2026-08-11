@@ -17,7 +17,7 @@
 ### 1.2 鉴权
 
 - 登录成功返回 `token`，后续请求在请求头携带：`Authorization: Bearer <token>`
-- 除 `POST /api/sessions` 外，所有接口均需鉴权；未携带或无效返回 `401`
+- 除 `POST /api/sessions`、`POST /api/users` 外，所有接口均需鉴权；未携带或无效返回 `401`
 
 ### 1.3 HTTP 状态码
 
@@ -46,6 +46,7 @@
 | `FORBIDDEN` | 无权限（403） |
 | `NOT_FOUND` / `PROJECT_NOT_FOUND` / `TASK_NOT_FOUND` | 资源不存在（404） |
 | `INVALID_CREDENTIALS` | 用户名或密码错误（401） |
+| `USERNAME_TAKEN` | 注册时用户名已存在（409） |
 | `INVALID_INVITE` | 邀请码无效（409） |
 | `ALREADY_MEMBER` | 已在该项目中（409） |
 | `TEAM_FULL` | 队伍已满 4 人（409） |
@@ -240,6 +241,27 @@
 错误：`401 INVALID_CREDENTIALS`（用户名或密码错误）、`400 VALIDATION_ERROR`。
 
 > 账号角色由后端决定（演示账号：`student/123456` 学生、`teacher/123456` 教师）。
+
+#### `POST /api/users` — 注册（公开接口）
+
+请求：
+
+```json
+{ "username": "alice", "password": "123456", "name": "爱丽丝", "role": "student" }
+```
+
+- `username`：登录用户名，至少 3 个字符，全局唯一
+- `password`：至少 6 个字符
+- `name`：真实姓名
+- `role`：仅 `student` / `teacher`
+
+响应 `201`（注册成功即登录态，直接返回 token）：
+
+```json
+{ "token": "mock.u5.xxxx", "user": { "id": "u5", "username": "alice", "name": "爱丽丝", "role": "student" } }
+```
+
+错误：`409 USERNAME_TAKEN`（用户名已被占用）、`400 VALIDATION_ERROR`（参数缺失或格式不合法）。
 
 #### `DELETE /api/sessions/current` — 登出
 

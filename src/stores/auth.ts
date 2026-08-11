@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { login as apiLogin, logout as apiLogout } from '../api/auth'
-import type { User } from '../api/types'
+import { login as apiLogin, logout as apiLogout, register as apiRegister } from '../api/auth'
+import type { Role, User } from '../api/types'
 
 const TOKEN_KEY = 'innoark_token'
 const USER_KEY = 'innoark_user'
@@ -23,6 +23,15 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(username: string, password: string) {
     const res = await apiLogin(username, password)
+    saveSession(res)
+  }
+
+  async function register(payload: { username: string; password: string; name: string; role: Role }) {
+    const res = await apiRegister(payload)
+    saveSession(res)
+  }
+
+  function saveSession(res: { token: string; user: User }) {
     token.value = res.token
     user.value = res.user
     localStorage.setItem(TOKEN_KEY, res.token)
@@ -41,5 +50,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem(USER_KEY)
   }
 
-  return { token, user, isAuthenticated, isTeacher, login, logout }
+  return { token, user, isAuthenticated, isTeacher, login, register, logout }
 })
