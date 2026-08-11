@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import {
   NCard, NButton, NTag, NSpace, NText, NProgress, NModal, NInput,
-  NDatePicker, NTimeline, NTimelineItem, NIcon, NEmpty, useMessage, useDialog,
+  NDatePicker, NTimeline, NTimelineItem, NIcon, NEmpty, useMessage, useDialog, useThemeVars,
 } from 'naive-ui'
 import { AddOutline } from '@vicons/ionicons5'
 import { fetchTasks, createTask, updateTask, deleteTask, fetchTaskLogs } from '../../api/task'
@@ -17,6 +17,7 @@ const props = defineProps<{
 
 const message = useMessage()
 const dialog = useDialog()
+const themeVars = useThemeVars()
 
 const tasks = ref<Task[]>([])
 const logs = ref<TaskLog[]>([])
@@ -189,6 +190,7 @@ const logName = (userId: string) => props.members.find((m) => m.id === userId)?.
             v-for="task in tasksOf(col.status)"
             :key="task.id"
             class="task-card"
+            :style="{ background: themeVars.cardColor }"
             draggable="true"
             @dragstart="onDragStart(task.id)"
             @click="editable && openEdit(task)"
@@ -265,7 +267,6 @@ const logName = (userId: string) => props.members.find((m) => m.id === userId)?.
 }
 
 .task-card {
-  background: var(--n-card-color, #fff);
   border: 1px solid rgba(128, 128, 128, 0.18);
   border-radius: 8px;
   padding: 10px 12px;
