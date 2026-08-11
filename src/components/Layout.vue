@@ -3,7 +3,7 @@ import { ref, h } from 'vue'
 import type { Component } from 'vue'
 import { 
   NLayout, NLayoutHeader, NLayoutSider, NLayoutContent, NLayoutFooter,
-  NMenu, NSwitch, NSpace, NText, NIcon, NButton
+  NMenu, NText, NIcon, NButton
 } from 'naive-ui'
 import { 
   HomeOutline as HomeIcon,

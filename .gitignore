@@ -27,3 +27,6 @@ dist-ssr
 
 # ZCode tool directory
 .zcode/
+
+# Mock backend data
+.mock-data/
