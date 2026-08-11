@@ -28,28 +28,48 @@ const router = useRouter()
 const auth = useAuthStore()
 const settings = useSettingsStore()
 
+interface MenuDef { key: string; title: string; icon: Component }
+
+const studentMenu: MenuDef[] = [
+  { key: '/', title: '首页', icon: HomeIcon },
+  { key: '/projects', title: '课题与项目', icon: RocketIcon },
+  { key: '/resources', title: '资源库', icon: CompassIcon },
+  { key: '/focus', title: '专注模式', icon: TimerIcon },
+  { key: '/settings', title: '设置', icon: SettingsIcon },
+  { key: '/about', title: '关于', icon: AboutIcon },
+]
+
+const teacherMenu: MenuDef[] = [
+  { key: '/', title: '首页', icon: HomeIcon },
+  { key: '/teacher', title: '团队总览', icon: SchoolIcon },
+  { key: '/projects', title: '课题与项目', icon: RocketIcon },
+  { key: '/settings', title: '设置', icon: SettingsIcon },
+  { key: '/about', title: '关于', icon: AboutIcon },
+]
+
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) })
 }
 
-const studentMenu = [
-  { label: () => h(RouterLink, { to: '/' }, { default: () => '首页' }), key: '/', icon: renderIcon(HomeIcon) },
-  { label: () => h(RouterLink, { to: '/projects' }, { default: () => '课题与项目' }), key: '/projects', icon: renderIcon(RocketIcon) },
-  { label: () => h(RouterLink, { to: '/resources' }, { default: () => '资源库' }), key: '/resources', icon: renderIcon(CompassIcon) },
-  { label: () => h(RouterLink, { to: '/focus' }, { default: () => '专注模式' }), key: '/focus', icon: renderIcon(TimerIcon) },
-  { label: () => h(RouterLink, { to: '/settings' }, { default: () => '设置' }), key: '/settings', icon: renderIcon(SettingsIcon) },
-  { label: () => h(RouterLink, { to: '/about' }, { default: () => '关于' }), key: '/about', icon: renderIcon(AboutIcon) },
-]
+function renderCompactLabel(def: MenuDef) {
+  return () =>
+    h(
+      NPopover,
+      { trigger: 'hover', placement: 'bottom' },
+      {
+        trigger: () => h(RouterLink, { to: def.key }, { default: () => h(NIcon, { size: 18 }, { default: () => h(def.icon) }) }),
+        default: () => def.title,
+      },
+    )
+}
 
-const teacherMenu = [
-  { label: () => h(RouterLink, { to: '/' }, { default: () => '首页' }), key: '/', icon: renderIcon(HomeIcon) },
-  { label: () => h(RouterLink, { to: '/teacher' }, { default: () => '团队总览' }), key: '/teacher', icon: renderIcon(SchoolIcon) },
-  { label: () => h(RouterLink, { to: '/projects' }, { default: () => '课题与项目' }), key: '/projects', icon: renderIcon(RocketIcon) },
-  { label: () => h(RouterLink, { to: '/settings' }, { default: () => '设置' }), key: '/settings', icon: renderIcon(SettingsIcon) },
-  { label: () => h(RouterLink, { to: '/about' }, { default: () => '关于' }), key: '/about', icon: renderIcon(AboutIcon) },
-]
-
-const menuOptions = computed(() => (auth.isTeacher ? teacherMenu : studentMenu))
+const menuOptions = computed(() => {
+  const defs = auth.isTeacher ? teacherMenu : studentMenu
+  if (compactHeader.value) {
+    return defs.map((d) => ({ key: d.key, label: renderCompactLabel(d) }))
+  }
+  return defs.map((d) => ({ key: d.key, icon: renderIcon(d.icon), label: () => h(RouterLink, { to: d.key }, { default: () => d.title }) }))
+})
 
 const menuKey = computed(() => {
   if (route.path.startsWith('/project/')) return '/projects'
@@ -65,15 +85,19 @@ const handleLogout = async () => {
 }
 
 const isMobile = ref(false)
+const compactHeader = ref(false)
 const mobileMenuOpen = ref(false)
 
-function checkMobile() {
+function updateViewport() {
   isMobile.value = window.innerWidth < 768
+  compactHeader.value = window.innerWidth < 1024
 }
 
-function onResize() { checkMobile() }
-onMounted(checkMobile)
-onMounted(() => window.addEventListener('resize', onResize))
+function onResize() { updateViewport() }
+onMounted(() => {
+  updateViewport()
+  window.addEventListener('resize', onResize)
+})
 onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 </script>
 
@@ -175,6 +199,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 }
 
 .header-menu-area .n-menu {
+  --n-font-size: 13px !important;
   height: 100%;
   display: flex;
   align-items: center;
