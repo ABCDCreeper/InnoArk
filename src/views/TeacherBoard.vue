@@ -63,7 +63,7 @@ const activeCount = () => projects.value.filter((p) => p.status === 'active').le
               <n-avatar-group :options="p.members.map((m) => ({ name: m.name, src: '' }))" :size="24" />
               <n-text depth="3" style="font-size: 12px;">最近更新 {{ formatTime(p.updatedAt) }}</n-text>
             </n-space>
-            <n-button size="small" type="primary" ghost block @click.stop="router.push(`/project/${p.id}`)">
+            <n-button size="small" type="primary" ghost block @click.stop="router.push(`/project/${p.id}`)" style="display: flex; justify-content: space-between; align-items: center;">
               查看项目 <n-icon size="14"><chevron-forward-outline /></n-icon>
             </n-button>
           </n-space>

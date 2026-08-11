@@ -147,7 +147,7 @@ const posOf = (id: string) => layout.value.pos.get(id)!
         <g
           v-for="node in nodes"
           :key="node.id"
-          :transform="`translate(${posOf(node.id).x} ${posOf(node.id).y})`"
+          :transform="`translate(${posOf(node.id).x} ${posOf(node.id).y * LEAF_GAP + 30})`"
           style="cursor: pointer;"
           @click="selectedId = node.id"
           @dblclick="onDblClick(node)"

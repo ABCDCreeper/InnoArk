@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { NButton, NSpace, NColorPicker, NSlider, NIcon, NPopover } from 'naive-ui'
+import { NButton, NSpace, NSlider, NIcon, NPopover, NText } from 'naive-ui'
 import { BrushOutline, TrashOutline } from '@vicons/ionicons5'
 
+const PREDEFINED_COLORS = ['#18a058', '#2080f0', '#d03050', '#f0a020', '#8a2be2', '#333333']
+
 const canvasRef = ref<HTMLCanvasElement | null>(null)
-const color = ref('#18a058')
+const color = ref(PREDEFINED_COLORS[0])
 const lineWidth = ref(4)
 const erasing = ref(false)
 
@@ -81,9 +83,9 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="whiteboard">
-    <n-space align="center" justify="space-between" style="margin-bottom: 10px;">
-      <n-space align="center">
-        <n-color-picker v-model:value="color" :show-alpha="false" size="small" />
+    <n-space align="center" justify="space-between" style="margin-bottom: 10px;" wrap>
+      <n-space align="center" wrap>
+        <span v-for="c in PREDEFINED_COLORS" :key="c" class="color-dot" :style="{ background: c, outline: color === c ? '2px solid var(--n-text-color)' : 'none' }" @click="color = c" />
         <n-popover trigger="hover">
           <template #trigger>
             <n-icon size="20" :color="erasing ? '#d03050' : undefined"><brush-outline /></n-icon>
@@ -93,8 +95,8 @@ onBeforeUnmount(() => {
         <n-button size="tiny" :type="erasing ? 'error' : 'default'" @click="erasing = !erasing">
           {{ erasing ? '退出橡皮' : '橡皮擦' }}
         </n-button>
-        <n-slider v-model:value="lineWidth" :min="1" :max="12" style="width: 120px;" />
-        <n-text depth="3" style="font-size: 12px;">粗细 {{ lineWidth }}</n-text>
+        <n-slider v-model:value="lineWidth" :min="1" :max="12" style="width: 100px;" />
+        <n-text depth="3" style="font-size: 12px; white-space: nowrap;">粗细 {{ lineWidth }}</n-text>
       </n-space>
       <n-button size="tiny" @click="clearBoard">
         <template #icon><n-icon><trash-outline /></n-icon></template>
@@ -110,6 +112,20 @@ onBeforeUnmount(() => {
 <style scoped>
 .whiteboard {
   width: 100%;
+}
+
+.color-dot {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid rgba(128, 128, 128, 0.2);
+  transition: transform 0.15s;
+}
+
+.color-dot:hover {
+  transform: scale(1.2);
 }
 
 .board-area {

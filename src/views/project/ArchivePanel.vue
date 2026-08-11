@@ -76,10 +76,12 @@ function formatTime(iso: string) {
     </template>
 
     <n-empty v-if="notFinished" description="项目结题后可查看科创档案">
-      <n-text depth="3" style="font-size: 13px; display: block; margin-bottom: 12px;">
+      <n-text depth="3" style="font-size: 13px; display: block; margin-bottom: 16px; text-align: center;">
         结题后系统将自动整合全部过程记录，生成一份完整的电子版科创档案。
       </n-text>
-      <n-button v-if="editable" type="primary" @click="confirmFinish">结题</n-button>
+      <n-space justify="center">
+        <n-button v-if="editable" type="primary" @click="confirmFinish">结题</n-button>
+      </n-space>
     </n-empty>
 
     <template v-if="archive">

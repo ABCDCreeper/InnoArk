@@ -110,4 +110,16 @@ const switchRole = (value: string) => {
   max-width: 92vw;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
+
+@media (max-width: 768px) {
+  .login-container {
+    background: linear-gradient(160deg, #1a1a2e 0%, #16213e 100%);
+  }
+  .login-card {
+    width: 100%;
+    max-width: 100vw;
+    margin: 0 12px;
+    box-shadow: none;
+  }
+}
 </style>

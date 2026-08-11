@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { NCard, NGrid, NGridItem, NSpace, NText, NStatistic, useMessage } from 'naive-ui'
 import Pomodoro from '../components/Pomodoro.vue'
 import CanvasWhiteboard from '../components/CanvasWhiteboard.vue'
 import WeeklyBar from '../components/WeeklyBar.vue'
 import { createFocusSession, fetchFocusStats } from '../api/focus'
+import { usePomodoroStore } from '../stores/pomodoro'
 import type { FocusStats } from '../api/types'
 
 const message = useMessage()
 const stats = ref<FocusStats | null>(null)
+const store = usePomodoroStore()
 
 async function load() {
   stats.value = await fetchFocusStats(7)
@@ -16,19 +18,22 @@ async function load() {
 
 onMounted(load)
 
-async function onComplete(mode: 'focus' | 'break', minutes: number) {
-  try {
-    await createFocusSession(minutes, mode)
-    if (mode === 'focus') {
-      message.success('完成一个番茄钟，休息一下吧！')
-    } else {
-      message.info('休息结束，继续加油！')
-    }
-    await load()
-  } catch {
-    // 上报失败不影响本地计时
-  }
-}
+watch(() => store.sessionCompleted, (completed) => {
+  if (!completed) return
+  createFocusSession(completed.minutes, completed.mode)
+    .then(() => {
+      if (completed.mode === 'focus') {
+        message.success('完成一个番茄钟，休息一下吧！')
+      } else {
+        message.info('休息结束，继续加油！')
+      }
+      store.sessionCompleted = null
+      load()
+    })
+    .catch(() => {
+      store.sessionCompleted = null
+    })
+})
 </script>
 
 <template>
@@ -39,7 +44,7 @@ async function onComplete(mode: 'focus' | 'break', minutes: number) {
           <template #header-extra>
             <n-text depth="3" style="font-size: 12px;">25 分钟专注 + 5 分钟休息</n-text>
           </template>
-          <pomodoro @complete="onComplete" />
+          <pomodoro />
         </n-card>
         <n-card title="专注统计">
           <n-space align="center" justify="space-around" wrap style="margin-bottom: 16px;">
