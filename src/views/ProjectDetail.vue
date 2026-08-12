@@ -161,18 +161,3 @@ async function copyInvite() {
     </template>
   </n-spin>
 </template>
-
-<style scoped>
-.member-avatars {
-  display: flex;
-  align-items: center;
-}
-
-.member-avatars .n-avatar {
-  margin-left: -8px;
-}
-
-.member-avatars .n-avatar:first-child {
-  margin-left: 0;
-}
-</style>

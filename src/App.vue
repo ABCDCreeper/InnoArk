@@ -26,6 +26,19 @@ const theme = computed(() => {
 </template>
 
 <style>
+.member-avatars {
+  display: flex;
+  align-items: center;
+}
+
+.member-avatars .n-avatar {
+  margin-left: -8px;
+}
+
+.member-avatars .n-avatar:first-child {
+  margin-left: 0;
+}
+
 @media (max-width: 768px) {
   body { font-size: 14px; }
   .n-card { border-radius: 8px !important; }
