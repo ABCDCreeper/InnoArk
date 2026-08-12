@@ -48,7 +48,7 @@ async function run(action: () => Promise<unknown>, successMsg?: string) {
   try {
     await action()
     await refresh()
-    if (successMsg) notification.success({ title: successMsg })
+    if (successMsg) notification.success({ title: successMsg, duration: 3000 })
   } catch (err) {
     message.error(err instanceof ApiError ? err.message : '操作失败')
   }
