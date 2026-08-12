@@ -202,6 +202,7 @@ onBeforeUnmount(onPointerUp)
 
 .note-hint {
   flex: 1;
+  text-align: right;
   font-size: 11px;
   color: rgba(51, 51, 51, 0.55);
   white-space: nowrap;
