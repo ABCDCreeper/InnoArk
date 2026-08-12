@@ -63,12 +63,15 @@ function renderCompactLabel(def: MenuDef) {
     )
 }
 
-const menuOptions = computed(() => {
+const fullOptions = computed(() => {
   const defs = auth.isTeacher ? teacherMenu : studentMenu
-  if (compactHeader.value) {
-    return defs.map((d) => ({ key: d.key, label: renderCompactLabel(d) }))
-  }
   return defs.map((d) => ({ key: d.key, icon: renderIcon(d.icon), label: () => h(RouterLink, { to: d.key }, { default: () => d.title }) }))
+})
+
+const headerOptions = computed(() => {
+  if (!compactHeader.value) return fullOptions.value
+  const defs = auth.isTeacher ? teacherMenu : studentMenu
+  return defs.map((d) => ({ key: d.key, label: renderCompactLabel(d) }))
 })
 
 const menuKey = computed(() => {
@@ -112,7 +115,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
       </div>
 
       <div class="header-menu-area">
-        <n-menu v-if="!settings.sidebarMode && !isMobile" :value="menuKey" mode="horizontal" :options="menuOptions" />
+        <n-menu v-if="!settings.sidebarMode && !isMobile" :value="menuKey" mode="horizontal" :options="headerOptions" />
       </div>
 
       <div class="header-user-area">
@@ -139,7 +142,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 
     <n-layout has-sider style="height: calc(100vh - 64px - 50px);">
       <n-layout-sider v-if="settings.sidebarMode && !isMobile" bordered collapse-mode="width" :collapsed-width="64" :width="220" show-trigger>
-        <n-menu :value="menuKey" :options="menuOptions" />
+        <n-menu :value="menuKey" :options="fullOptions" />
       </n-layout-sider>
 
       <n-layout-content content-style="padding: 16px; overflow-y: auto;">
@@ -154,7 +157,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 
   <n-drawer v-model:show="mobileMenuOpen" :width="260" placement="left">
     <n-drawer-content :title="'菜单'">
-      <n-menu :value="menuKey" :options="menuOptions" @update:value="mobileMenuOpen = false" />
+      <n-menu :value="menuKey" :options="fullOptions" @update:value="mobileMenuOpen = false" />
     </n-drawer-content>
   </n-drawer>
 
