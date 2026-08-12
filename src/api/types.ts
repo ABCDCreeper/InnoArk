@@ -25,6 +25,7 @@ export interface Project {
   status: ProjectStatus
   inviteCode: string
   leaderId: string
+  description: string
   createdAt: string
   updatedAt: string
   finishedAt: string | null

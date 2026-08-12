@@ -10,6 +10,7 @@ import { fetchProject } from '../api/project'
 import { ApiError } from '../api/request'
 import type { Project } from '../api/types'
 import NebulaPanel from './project/NebulaPanel.vue'
+import ProjectDetailPanel from './project/ProjectDetailPanel.vue'
 import TaskBoardPanel from './project/TaskBoardPanel.vue'
 import CheckinPanel from './project/CheckinPanel.vue'
 import AnnotationPanel from './project/AnnotationPanel.vue'
@@ -60,6 +61,7 @@ watch(() => route.query.tab, (val) => {
 
 const tabs = computed(() => {
   const list = [
+    { key: 'details', label: '项目详情', disabled: false },
     { key: 'nebula', label: '星云看板', disabled: false },
     { key: 'tasks', label: '任务看板', disabled: false },
     { key: 'checkins', label: '打卡与反馈', disabled: false },
@@ -131,7 +133,14 @@ async function copyInvite() {
         <!-- Tabs -->
         <n-tabs :value="tabKey" @update:value="onTabChange" type="line" animated>
           <n-tab-pane v-for="t in tabs" :key="t.key" :name="t.key" :tab="t.label" :disabled="t.disabled">
-            <nebula-panel v-if="t.key === 'nebula'" :project-id="project.id" :editable="editable" />
+            <project-detail-panel
+              v-if="t.key === 'details'"
+              :project-id="project.id"
+              :description="project.description"
+              :editable="editable || isTeacher"
+              @saved="load"
+            />
+            <nebula-panel v-else-if="t.key === 'nebula'" :project-id="project.id" :editable="editable" />
             <task-board-panel
               v-else-if="t.key === 'tasks'"
               :project-id="project.id"

@@ -113,6 +113,7 @@
   "status": "active",
   "inviteCode": "P1-7F3A",
   "leaderId": "u1",
+  "description": "探索火星基地的能源自给方案",
   "createdAt": "2026-07-30T02:00:00.000Z",
   "updatedAt": "2026-08-11T01:00:00.000Z",
   "finishedAt": null,
@@ -122,7 +123,7 @@
 }
 ```
 
-`status`: `active` 进行中 | `finished` 已结题。`progress` 由后端按任务状态实时计算。
+`status`: `active` 进行中 | `finished` 已结题。`description` 项目简介（≤2000 字，组员与教师可编辑）。`progress` 由后端按任务状态实时计算。
 
 ### 2.4 MindNode 思维导图节点
 
@@ -305,13 +306,19 @@
 { "name": "新名称" }
 ```
 
+或填写简介：
+
+```json
+{ "description": "探索火星基地的能源自给方案" }
+```
+
 或结题：
 
 ```json
 { "status": "finished" }
 ```
 
-结题时后端记录 `finishedAt`，并生成一条里程碑系统反馈。
+简介由组员或教师填写，≤2000 字。结题时后端记录 `finishedAt`，并生成一条里程碑系统反馈。
 响应 `200`：`Project`。错误：`400`、`403`。
 
 #### `POST /api/projects/join` — 邀请码加入（组队）
