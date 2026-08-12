@@ -130,9 +130,9 @@ async function copyInvite() {
           </n-space>
         </n-card>
 
-        <!-- Tabs -->
-        <n-tabs :value="tabKey" @update:value="onTabChange" type="line" animated>
-          <n-tab-pane v-for="t in tabs" :key="t.key" :name="t.key" :tab="t.label" :disabled="t.disabled">
+        <n-card size="small">
+          <n-tabs :value="tabKey" @update:value="onTabChange" type="line" animated>
+            <n-tab-pane v-for="t in tabs" :key="t.key" :name="t.key" :tab="t.label" :disabled="t.disabled">
             <project-detail-panel
               v-if="t.key === 'details'"
               :project-id="project.id"
@@ -164,8 +164,9 @@ async function copyInvite() {
               :editable="editable"
               :project-name="project.name"
             />
-          </n-tab-pane>
-        </n-tabs>
+            </n-tab-pane>
+          </n-tabs>
+        </n-card>
       </n-space>
     </template>
   </n-spin>
