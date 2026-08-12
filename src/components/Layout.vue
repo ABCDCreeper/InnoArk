@@ -90,6 +90,7 @@ const handleLogout = async () => {
 const isMobile = ref(false)
 const compactHeader = ref(false)
 const mobileMenuOpen = ref(false)
+const siderCollapsed = ref(false)
 
 function updateViewport() {
   isMobile.value = window.innerWidth < 768
@@ -141,8 +142,8 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
     </n-layout-header>
 
     <n-layout has-sider style="height: calc(100vh - 64px - 50px);">
-      <n-layout-sider v-if="settings.sidebarMode && !isMobile" bordered collapse-mode="width" :collapsed-width="64" :width="220" show-trigger>
-        <n-menu :value="menuKey" :options="fullOptions" />
+      <n-layout-sider v-if="settings.sidebarMode && !isMobile" bordered collapse-mode="width" :collapsed-width="64" :width="220" show-trigger v-model:collapsed="siderCollapsed">
+        <n-menu :value="menuKey" :options="fullOptions" :collapsed="siderCollapsed" :collapsed-width="64" :collapsed-icon-size="20" />
       </n-layout-sider>
 
       <n-layout-content content-style="padding: 16px; overflow-y: auto;">
