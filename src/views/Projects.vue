@@ -3,12 +3,14 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NCard, NGrid, NGridItem, NButton, NTag, NSpace, NText, NProgress, NTabs, NTabPane,
-  NModal, NInput, NForm, NFormItem, NEmpty, NAvatarGroup, NIcon, useMessage, useDialog,
+  NModal, NInput, NForm, NFormItem, NEmpty, NAvatar, NIcon, useMessage, useDialog,
 } from 'naive-ui'
 import { RocketOutline } from '@vicons/ionicons5'
 import { fetchTopics, fetchProjects, createProject, joinProject, updateProject } from '../api/project'
 import { ApiError } from '../api/request'
 import type { Project, Topic } from '../api/types'
+
+const AVATAR_COLORS = ['#18a058', '#2080f0', '#d03050', '#f0a020']
 
 const router = useRouter()
 const message = useMessage()
@@ -128,7 +130,17 @@ async function finishProject(p: Project) {
                   <n-tag size="small" :bordered="false" type="primary">邀请码 {{ p.inviteCode }}</n-tag>
                 </n-space>
                 <n-space align="center">
-                  <n-avatar-group :options="p.members.map((m) => ({ name: m.name, src: '' }))" :size="24" />
+                  <div class="member-avatars">
+                    <n-avatar
+                      v-for="(m, i) in p.members"
+                      :key="m.id"
+                      round
+                      size="small"
+                      :style="{ backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }"
+                    >
+                      {{ m.name.slice(0, 1) }}
+                    </n-avatar>
+                  </div>
                   <n-progress type="line" :percentage="p.progress.total === 0 ? 0 : Math.round((p.progress.done / p.progress.total) * 100)" :height="8" style="width: 120px;" />
                   <n-text depth="3" style="font-size: 12px;">{{ p.progress.done }}/{{ p.progress.total }}</n-text>
                   <n-button size="small" type="primary" ghost @click.stop="router.push(`/project/${p.id}`)">进入</n-button>
