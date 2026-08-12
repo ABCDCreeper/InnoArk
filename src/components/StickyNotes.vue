@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, ref } from 'vue'
 import { NButton, NIcon, NPopover, NSpace, NText } from 'naive-ui'
 import { AddOutline, CloseOutline } from '@vicons/ionicons5'
 import type { StickyNote } from '../api/types'
@@ -12,6 +12,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   create: [body: Partial<StickyNote>]
   update: [id: string, body: Partial<StickyNote>]
+  save: [id: string, body: Partial<StickyNote>]
   remove: [id: string]
 }>()
 
@@ -22,7 +23,6 @@ const editingId = ref<string | null>(null)
 const editingText = ref('')
 const dragOffset = ref({ dx: 0, dy: 0 })
 
-let dragEl: HTMLElement | null = null
 let dragStart: { x: number; y: number } | null = null
 let dragging = false
 
@@ -31,22 +31,23 @@ const posOf = (note: StickyNote) =>
 
 function onPointerDown(e: PointerEvent, note: StickyNote) {
   if (!props.editable) return
-  const rect = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect()
+  const rect = (e.currentTarget as HTMLElement).closest('.notes-area')!.getBoundingClientRect()
   dragOffset.value = { dx: e.clientX - rect.left - note.x, dy: e.clientY - rect.top - note.y }
   dragPos.value = { id: note.id, x: note.x, y: note.y }
-  dragEl = e.currentTarget as HTMLElement
   dragStart = { x: e.clientX, y: e.clientY }
   dragging = false
+  window.addEventListener('pointermove', onPointerMove)
+  window.addEventListener('pointerup', onPointerUp)
+  window.addEventListener('pointercancel', onPointerUp)
 }
 
 function onPointerMove(e: PointerEvent) {
-  if (!dragPos.value || !dragEl || !dragStart) return
+  if (!dragPos.value || !dragStart) return
   if (!dragging) {
     if (Math.hypot(e.clientX - dragStart.x, e.clientY - dragStart.y) < 3) return
     dragging = true
-    dragEl.setPointerCapture(e.pointerId)
   }
-  const rect = dragEl.parentElement!.getBoundingClientRect()
+  const rect = (document.querySelector('.notes-area') as HTMLElement).getBoundingClientRect()
   dragPos.value = {
     id: dragPos.value.id,
     x: Math.max(0, Math.min(e.clientX - rect.left - dragOffset.value.dx, rect.width - 180)),
@@ -54,14 +55,13 @@ function onPointerMove(e: PointerEvent) {
   }
 }
 
-function onPointerUp(e: PointerEvent) {
+function onPointerUp() {
+  window.removeEventListener('pointermove', onPointerMove)
+  window.removeEventListener('pointerup', onPointerUp)
+  window.removeEventListener('pointercancel', onPointerUp)
   if (dragPos.value && dragging) {
     emit('update', dragPos.value.id, { x: dragPos.value.x, y: dragPos.value.y })
   }
-  if (dragEl?.hasPointerCapture(e.pointerId)) {
-    dragEl.releasePointerCapture(e.pointerId)
-  }
-  dragEl = null
   dragStart = null
   dragPos.value = null
   dragging = false
@@ -75,7 +75,7 @@ function startEdit(note: StickyNote) {
 
 function commitEdit() {
   if (editingId.value) {
-    emit('update', editingId.value, { content: editingText.value })
+    emit('save', editingId.value, { content: editingText.value })
   }
   editingId.value = null
 }
@@ -89,6 +89,8 @@ function addNote() {
     y: 20 + ((count % 4) * 40),
   })
 }
+
+onBeforeUnmount(onPointerUp)
 </script>
 
 <template>
@@ -107,12 +109,15 @@ function addNote() {
         :key="note.id"
         class="note"
         :style="{ left: `${posOf(note).x}px`, top: `${posOf(note).y}px`, background: note.color }"
-        @pointerdown="onPointerDown($event, note)"
-        @pointermove="onPointerMove"
-        @pointerup="onPointerUp"
-        @pointercancel="onPointerUp"
       >
-        <div v-if="editable" class="note-actions">
+        <div
+          v-if="editable"
+          class="note-header"
+          @pointerdown="onPointerDown($event, note)"
+          @pointermove="onPointerMove"
+          @pointerup="onPointerUp"
+          @pointercancel="onPointerUp"
+        >
           <n-popover trigger="hover">
             <template #trigger>
               <span class="dot" :style="{ background: note.color }" />
@@ -127,6 +132,7 @@ function addNote() {
               />
             </n-space>
           </n-popover>
+          <span class="note-hint">{{ editingId === note.id ? '编辑中' : '双击编辑' }}</span>
           <n-icon size="14" class="close" @click="emit('remove', note.id)"><close-outline /></n-icon>
         </div>
         <textarea
@@ -138,6 +144,15 @@ function addNote() {
           @keydown.enter.prevent="commitEdit"
         />
         <p v-else class="note-text" @dblclick="startEdit(note)">{{ note.content }}</p>
+        <n-button
+          v-if="editingId === note.id"
+          size="tiny"
+          type="primary"
+          style="margin-top: 6px; align-self: flex-end;"
+          @click="commitEdit"
+        >
+          保存
+        </n-button>
       </div>
     </div>
   </div>
@@ -175,12 +190,22 @@ function addNote() {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
-.note-actions {
+.note-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
-  min-height: 18px;
+  gap: 6px;
+  margin-bottom: 6px;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.note-hint {
+  flex: 1;
+  font-size: 11px;
+  color: rgba(51, 51, 51, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .dot {

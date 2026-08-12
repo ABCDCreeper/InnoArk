@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { NCard, NSpace, useMessage } from 'naive-ui'
+import { NCard, NSpace, useMessage, useNotification } from 'naive-ui'
 import MindMap from '../../components/MindMap.vue'
 import StickyNotes from '../../components/StickyNotes.vue'
 import {
@@ -16,6 +16,7 @@ const props = defineProps<{
 }>()
 
 const message = useMessage()
+const notification = useNotification()
 const mindNodes = ref<MindNode[]>([])
 const notes = ref<StickyNote[]>([])
 
@@ -43,10 +44,11 @@ onBeforeUnmount(() => {
   if (timer) clearInterval(timer)
 })
 
-async function run(action: () => Promise<unknown>) {
+async function run(action: () => Promise<unknown>, successMsg?: string) {
   try {
     await action()
     await refresh()
+    if (successMsg) notification.success({ title: successMsg })
   } catch (err) {
     message.error(err instanceof ApiError ? err.message : '操作失败')
   }
@@ -59,6 +61,7 @@ const onNodeRemove = (id: string) => run(() => deleteMindNode(id))
 
 const onNoteCreate = (body: Partial<StickyNote>) => run(() => createNote(props.projectId, body))
 const onNoteUpdate = (id: string, body: Partial<StickyNote>) => run(() => updateNote(id, body))
+const onNoteSave = (id: string, body: Partial<StickyNote>) => run(() => updateNote(id, body), '便签内容已保存')
 const onNoteRemove = (id: string) => run(() => deleteNote(id))
 </script>
 
@@ -68,7 +71,7 @@ const onNoteRemove = (id: string) => run(() => deleteNote(id))
       <mind-map :nodes="mindNodes" :editable="editable" @create="onNodeCreate" @update="onNodeUpdate" @remove="onNodeRemove" />
     </n-card>
     <n-card title="灵感便签" size="small">
-      <sticky-notes :notes="notes" :editable="editable" @create="onNoteCreate" @update="onNoteUpdate" @remove="onNoteRemove" />
+      <sticky-notes :notes="notes" :editable="editable" @create="onNoteCreate" @update="onNoteUpdate" @save="onNoteSave" @remove="onNoteRemove" />
     </n-card>
   </n-space>
 </template>
