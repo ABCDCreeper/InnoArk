@@ -151,6 +151,11 @@
   dependencies:
     undici-types "~7.18.0"
 
+"@types/trusted-types@^2.0.7":
+  version "2.0.7"
+  resolved "https://registry.yarnpkg.com/@types/trusted-types/-/trusted-types-2.0.7.tgz#baccb07a970b91707df3a3e8ba6896c57ead2d11"
+  integrity sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==
+
 "@vicons/ionicons5@^0.13.0":
   version "0.13.0"
   resolved "https://registry.yarnpkg.com/@vicons/ionicons5/-/ionicons5-0.13.0.tgz#86856b21807f9e2340c31e7b596f7f42567a88b1"
@@ -331,6 +336,13 @@ detect-libc@^2.0.3:
   resolved "https://registry.yarnpkg.com/detect-libc/-/detect-libc-2.1.2.tgz#689c5dcdc1900ef5583a4cb9f6d7b473742074ad"
   integrity sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==
 
+dompurify@^3.4.13:
+  version "3.4.13"
+  resolved "https://registry.yarnpkg.com/dompurify/-/dompurify-3.4.13.tgz#fc28949d59f92d62e28a3a764bcbeee35897a1be"
+  integrity sha512-2vmYIoqjze2d+kakP8S/nS5shfsl587kzwEjcGlTdiksUVgFHnFCsLYDVj/JNqJVOQZGSYBTmuycv0PodwmnMQ==
+  optionalDependencies:
+    "@types/trusted-types" "^2.0.7"
+
 entities@^7.0.1:
   version "7.0.1"
   resolved "https://registry.yarnpkg.com/entities/-/entities-7.0.1.tgz#26e8a88889db63417dcb9a1e79a3f1bc92b5976b"
@@ -451,6 +463,11 @@ magic-string@^0.30.21:
   integrity sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==
   dependencies:
     "@jridgewell/sourcemap-codec" "^1.5.5"
+
+marked@^18.0.9:
+  version "18.0.9"
+  resolved "https://registry.yarnpkg.com/marked/-/marked-18.0.9.tgz#729fb57203a4fd58dd5ddc551917ef40daf5036a"
+  integrity sha512-/Sa4qiiHZxf0/FQdBBowr9q4r10krCwMvpK48FUBdXdUXScDxiQGR9zCPrFgRVR5LU3iySOiIjy09ZQvADir1w==
 
 muggle-string@^0.4.1:
   version "0.4.1"
