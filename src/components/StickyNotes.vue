@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { NButton, NIcon, NPopover, NText } from 'naive-ui'
+import { NButton, NIcon, NPopover, NSpace, NText } from 'naive-ui'
 import { AddOutline, CloseOutline } from '@vicons/ionicons5'
 import type { StickyNote } from '../api/types'
 
