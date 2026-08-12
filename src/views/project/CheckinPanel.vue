@@ -64,9 +64,10 @@ const feedbackLabel = (f: Feedback) => (f.type === 'milestone' ? '里程碑' : '
         <template #header-extra>
           <n-text depth="3" style="font-size: 12px;">共 {{ checkins.length }} 次打卡</n-text>
         </template>
-        <n-space v-if="editable" style="margin-bottom: 16px;">
+        <div v-if="editable" class="checkin-form">
           <n-input
             v-model:value="content"
+            class="checkin-text"
             type="textarea"
             :rows="2"
             placeholder="今天完成了什么？遇到了什么困难？"
@@ -76,7 +77,7 @@ const feedbackLabel = (f: Feedback) => (f.type === 'milestone' ? '里程碑' : '
             <template #icon><n-icon><send-outline /></n-icon></template>
             打卡
           </n-button>
-        </n-space>
+        </div>
         <n-empty v-if="checkins.length === 0" description="暂无打卡记录" />
         <n-timeline v-else>
           <n-timeline-item
@@ -110,3 +111,16 @@ const feedbackLabel = (f: Feedback) => (f.type === 'milestone' ? '里程碑' : '
     </n-grid-item>
   </n-grid>
 </template>
+
+<style scoped>
+.checkin-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.checkin-text {
+  flex: 1;
+}
+</style>
