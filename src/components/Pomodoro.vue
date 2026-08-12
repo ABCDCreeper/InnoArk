@@ -39,8 +39,9 @@ const circumference = 2 * Math.PI * radius
       <n-button size="small" @click="store.start" :disabled="store.running">开始</n-button>
       <n-button size="small" @click="store.pause" :disabled="!store.running">暂停</n-button>
       <n-button size="small" @click="store.reset">重置</n-button>
-      <n-button size="small" @click="store.switchMode('focus')">切换专注</n-button>
-      <n-button size="small" @click="store.switchMode('break')">切换休息</n-button>
+      <n-button size="small" @click="store.switchMode(store.mode === 'focus' ? 'break' : 'focus')">
+        {{ store.mode === 'focus' ? '切换休息' : '切换专注' }}
+      </n-button>
     </n-space>
   </div>
 </template>
