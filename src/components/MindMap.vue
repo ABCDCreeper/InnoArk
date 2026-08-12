@@ -48,6 +48,8 @@ const layout = computed(() => {
   return { pos, leafCount: Math.max(leafCursor, 1), maxDepth }
 })
 
+const yOf = (id: string) => layout.value.pos.get(id)!.y * LEAF_GAP + 30
+
 const nodeWidth = (label: string) => Math.min(Math.max(label.length * 15 + 28, 64), 260)
 const svgWidth = computed(() => layout.value.maxDepth * LEVEL_GAP + PAD_X + 320)
 const svgHeight = computed(() => layout.value.leafCount * LEAF_GAP + 40)
@@ -60,9 +62,9 @@ const paths = computed(() => {
     for (const c of props.nodes.filter((x) => x.parentId === n.id)) {
       const cp = pos.get(c.id)!
       const x1 = p.x + nodeWidth(n.label)
-      const y1 = p.y + NODE_H / 2
+      const y1 = yOf(n.id) + NODE_H / 2
       const x2 = cp.x
-      const y2 = cp.y + NODE_H / 2
+      const y2 = yOf(c.id) + NODE_H / 2
       const mx = (x1 + x2) / 2
       out.push(`M${x1} ${y1} C${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`)
     }
@@ -148,7 +150,7 @@ const posOf = (id: string) => layout.value.pos.get(id)!
         <g
           v-for="node in nodes"
           :key="node.id"
-          :transform="`translate(${posOf(node.id).x} ${posOf(node.id).y * LEAF_GAP + 30})`"
+          :transform="`translate(${posOf(node.id).x} ${yOf(node.id)})`"
           style="cursor: pointer;"
           @click="selectedId = node.id"
           @dblclick="onDblClick(node)"
