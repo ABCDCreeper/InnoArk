@@ -73,9 +73,8 @@ const feedbackLabel = (f: Feedback) => (f.type === 'milestone' ? '里程碑' : '
             placeholder="今天完成了什么？遇到了什么困难？"
             @keydown.enter.exact.prevent="submit"
           />
-          <n-button type="primary" :loading="submitting" :disabled="!content.trim()" @click="submit">
+          <n-button type="primary" :loading="submitting" :disabled="!content.trim()" title="打卡" @click="submit">
             <template #icon><n-icon><send-outline /></n-icon></template>
-            打卡
           </n-button>
         </div>
         <n-empty v-if="checkins.length === 0" description="暂无打卡记录" />

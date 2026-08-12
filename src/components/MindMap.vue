@@ -306,4 +306,11 @@ function selectNode(id: string) {
 svg {
   display: block;
 }
+
+@media (max-width: 768px) {
+  .map-viewport {
+    max-height: none;
+    aspect-ratio: 1 / 1;
+  }
+}
 </style>
