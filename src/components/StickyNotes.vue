@@ -22,6 +22,10 @@ const editingId = ref<string | null>(null)
 const editingText = ref('')
 const dragOffset = ref({ dx: 0, dy: 0 })
 
+let dragEl: HTMLElement | null = null
+let dragStart: { x: number; y: number } | null = null
+let dragging = false
+
 const posOf = (note: StickyNote) =>
   dragPos.value?.id === note.id ? dragPos.value : { x: note.x, y: note.y }
 
@@ -30,12 +34,19 @@ function onPointerDown(e: PointerEvent, note: StickyNote) {
   const rect = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect()
   dragOffset.value = { dx: e.clientX - rect.left - note.x, dy: e.clientY - rect.top - note.y }
   dragPos.value = { id: note.id, x: note.x, y: note.y }
-  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  dragEl = e.currentTarget as HTMLElement
+  dragStart = { x: e.clientX, y: e.clientY }
+  dragging = false
 }
 
 function onPointerMove(e: PointerEvent) {
-  if (!dragPos.value) return
-  const rect = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect()
+  if (!dragPos.value || !dragEl || !dragStart) return
+  if (!dragging) {
+    if (Math.hypot(e.clientX - dragStart.x, e.clientY - dragStart.y) < 3) return
+    dragging = true
+    dragEl.setPointerCapture(e.pointerId)
+  }
+  const rect = dragEl.parentElement!.getBoundingClientRect()
   dragPos.value = {
     id: dragPos.value.id,
     x: Math.max(0, Math.min(e.clientX - rect.left - dragOffset.value.dx, rect.width - 180)),
@@ -43,11 +54,17 @@ function onPointerMove(e: PointerEvent) {
   }
 }
 
-function onPointerUp() {
-  if (dragPos.value) {
+function onPointerUp(e: PointerEvent) {
+  if (dragPos.value && dragging) {
     emit('update', dragPos.value.id, { x: dragPos.value.x, y: dragPos.value.y })
-    dragPos.value = null
   }
+  if (dragEl?.hasPointerCapture(e.pointerId)) {
+    dragEl.releasePointerCapture(e.pointerId)
+  }
+  dragEl = null
+  dragStart = null
+  dragPos.value = null
+  dragging = false
 }
 
 function startEdit(note: StickyNote) {
@@ -77,7 +94,7 @@ function addNote() {
 <template>
   <div class="notes">
     <n-space align="center" justify="space-between" style="margin-bottom: 10px;">
-      <n-text depth="3" style="font-size: 12px;">便签记录灵感 · 拖拽移动 · 双击编辑</n-text>
+      <n-text depth="3" style="font-size: 12px;">{{ editable ? '便签记录灵感 · 拖拽移动 · 双击编辑' : '只读模式' }}</n-text>
       <n-button v-if="editable" size="small" @click="addNote">
         <template #icon><n-icon><add-outline /></n-icon></template>
         添加便签
@@ -93,6 +110,7 @@ function addNote() {
         @pointerdown="onPointerDown($event, note)"
         @pointermove="onPointerMove"
         @pointerup="onPointerUp"
+        @pointercancel="onPointerUp"
       >
         <div v-if="editable" class="note-actions">
           <n-popover trigger="hover">
