@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
-  NCard, NButton, NTag, NSpace, NText, NProgress, NTabs, NTabPane, NAvatarGroup, NIcon, useMessage, NSpin, NEmpty,
+  NCard, NButton, NTag, NSpace, NText, NProgress, NTabs, NTabPane, NAvatar, NIcon, useMessage, NSpin, NEmpty,
 } from 'naive-ui'
 import { ChevronBackOutline, CopyOutline } from '@vicons/ionicons5'
 import { useAuthStore } from '../stores/auth'
@@ -45,6 +45,8 @@ const editable = computed(() => {
   if (!project.value) return false
   return !isTeacher.value && project.value.status === 'active'
 })
+
+const AVATAR_COLORS = ['#18a058', '#2080f0', '#d03050', '#f0a020']
 
 const tabKey = ref(route.query.tab as string || 'nebula')
 
@@ -101,7 +103,17 @@ async function copyInvite() {
               </n-tag>
             </n-space>
             <n-space align="center" size="small">
-              <n-avatar-group :options="project.members.map((m) => ({ name: m.name, src: '' }))" :size="28" />
+              <div class="member-avatars">
+                <n-avatar
+                  v-for="(m, i) in project.members"
+                  :key="m.id"
+                  round
+                  size="small"
+                  :style="{ backgroundColor: AVATAR_COLORS[i % AVATAR_COLORS.length] }"
+                >
+                  {{ m.name.slice(0, 1) }}
+                </n-avatar>
+              </div>
               <n-text depth="3" style="font-size: 12px;">{{ project.members.length }}/4 人</n-text>
               <n-button size="tiny" quaternary @click="copyInvite">
                 <template #icon><n-icon><copy-outline /></n-icon></template>
@@ -149,3 +161,18 @@ async function copyInvite() {
     </template>
   </n-spin>
 </template>
+
+<style scoped>
+.member-avatars {
+  display: flex;
+  align-items: center;
+}
+
+.member-avatars .n-avatar {
+  margin-left: -8px;
+}
+
+.member-avatars .n-avatar:first-child {
+  margin-left: 0;
+}
+</style>
