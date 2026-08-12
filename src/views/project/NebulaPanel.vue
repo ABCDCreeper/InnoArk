@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { useMessage } from 'naive-ui'
+import { NCard, NSpace, useMessage } from 'naive-ui'
 import MindMap from '../../components/MindMap.vue'
 import StickyNotes from '../../components/StickyNotes.vue'
 import {
