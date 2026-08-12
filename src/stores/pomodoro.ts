@@ -29,11 +29,12 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
   }
 
   function finish() {
-    running.value = false
     stopTimer()
+    running.value = false
     sessionCompleted.value = { mode: mode.value, minutes: mode.value === 'focus' ? WORK_MIN : BREAK_MIN }
     mode.value = mode.value === 'focus' ? 'break' : 'focus'
     remainSec.value = (mode.value === 'focus' ? WORK_MIN : BREAK_MIN) * 60
+    start()
   }
 
   function start() {
@@ -63,6 +64,7 @@ export const usePomodoroStore = defineStore('pomodoro', () => {
     pause()
     mode.value = target
     remainSec.value = (target === 'focus' ? WORK_MIN : BREAK_MIN) * 60
+    start()
   }
 
   return {
