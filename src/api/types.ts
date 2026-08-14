@@ -120,12 +120,46 @@ export interface FocusSession {
 
 export interface QuizQuestion {
   id: string
+  groupId: string | null
+  createdBy: string | null
+  createdAt: string | null
+  updatedAt: string | null
   category: string
   difficulty: number
   question: string
   options: string[]
   answer: number
   explanation: string
+}
+
+export type QuizMode = 'group' | 'fallback' | 'mixed'
+
+export interface QuizGroup {
+  id: string
+  name: string
+  description: string
+  quizMode: QuizMode
+  memberCount: number
+  questionCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface GroupMember {
+  id: string
+  groupId: string
+  userId: string
+  role: 'teacher' | 'member'
+  name: string
+  username: string
+  joinedAt: string
+}
+
+export interface UserBrief {
+  id: string
+  username: string
+  name: string
+  role: string
 }
 
 export interface QuizAttempt {

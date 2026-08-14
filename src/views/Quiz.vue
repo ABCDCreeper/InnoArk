@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { NCard, NButton, NSpace, NText, NProgress, NTag, NStatistic, NIcon, NEmpty, NDivider, useMessage } from 'naive-ui'
 import { PlayOutline, RefreshOutline } from '@vicons/ionicons5'
 import { fetchQuizQuestions, fetchQuizStats, submitQuizAttempt } from '../api/quiz'
+import { fetchMyGroups } from '../api/group'
 import { ApiError } from '../api/request'
 import type { QuizQuestion, QuizStats } from '../api/types'
 
@@ -21,6 +22,8 @@ const praise = ref('')
 const floaters = ref<Array<{ emoji: string; left: number; delay: number; size: number }>>([])
 const missed = ref<Array<{ q: QuizQuestion; pick: number }>>([])
 const stats = ref<QuizStats | null>(null)
+const myGroups = ref<Array<{ id: string; name: string }>>([])
+const bankId = ref<string | null>(null)
 const oldBest = ref(-1)
 const isNewRecord = ref(false)
 const starting = ref(false)
@@ -45,10 +48,18 @@ const CATEGORY_EMOJI: Record<string, string> = { 物理: '⚡', 工程: '🔧', 
 
 onMounted(async () => {
   try {
-    stats.value = await fetchQuizStats()
+    const [s, g] = await Promise.all([fetchQuizStats(), fetchMyGroups()])
+    stats.value = s
+    myGroups.value = g.items
+    if (g.items.length > 0) bankId.value = g.items[0].id
   } catch {
     stats.value = null
   }
+})
+
+const bankLabel = computed(() => {
+  if (!bankId.value) return '公共题库'
+  return myGroups.value.find((x) => x.id === bankId.value)?.name ?? '公共题库'
 })
 
 const current = computed(() => questions.value[index.value])
@@ -70,9 +81,9 @@ function optionClass(i: number) {
 async function start() {
   starting.value = true
   try {
-    const res = await fetchQuizQuestions(10)
+    const res = await fetchQuizQuestions(10, bankId.value ?? undefined)
     if (res.items.length === 0) {
-      message.error('题库还是空的，先去找老师出题吧')
+      message.error('这个题库还是空的，等老师出题吧')
       return
     }
     questions.value = res.items
@@ -144,7 +155,7 @@ const LETTERS = ['A', 'B', 'C', 'D']
       <n-card size="small">
         <div class="start-hero">
           <div class="start-emoji">🧠✨</div>
-          <div class="start-title">知识闯关</div>
+          <div class="start-title">闯关</div>
           <n-text depth="3" class="start-desc">10 道跨学科选择题，答对 +10 分，连对攒🔥，错题也能涨知识！</n-text>
         </div>
 
@@ -156,6 +167,24 @@ const LETTERS = ['A', 'B', 'C', 'D']
           <n-statistic label="最近一次" :value="stats?.last ? `${stats.last.score}/${stats.last.total}` : '—'" />
         </div>
 
+        <div class="bank-area">
+          <n-text depth="3" style="font-size: 13px;">选择题库：</n-text>
+          <div class="bank-chips">
+            <span
+              class="bank-chip"
+              :class="{ active: bankId === null }"
+              @click="bankId = null"
+            >🌐 公共题库</span>
+            <span
+              v-for="g in myGroups"
+              :key="g.id"
+              class="bank-chip"
+              :class="{ active: bankId === g.id }"
+              @click="bankId = g.id"
+            >👥 {{ g.name }}</span>
+          </div>
+        </div>
+
         <div class="cat-chips">
           <n-tag v-for="c in Object.entries(CATEGORY_EMOJI)" :key="c[0]" size="small" :bordered="false" round>
             {{ c[1] }} {{ c[0] }}
@@ -165,7 +194,7 @@ const LETTERS = ['A', 'B', 'C', 'D']
         <div class="start-actions">
           <n-button type="primary" size="large" :loading="starting" @click="start">
             <template #icon><n-icon><play-outline /></n-icon></template>
-            开始挑战
+            开始挑战（{{ bankLabel }}）
           </n-button>
         </div>
       </n-card>
@@ -298,6 +327,42 @@ const LETTERS = ['A', 'B', 'C', 'D']
   justify-content: center;
   gap: 8px;
   margin-bottom: 24px;
+}
+
+.bank-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.bank-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.bank-chip {
+  padding: 5px 12px;
+  border: 1.5px solid rgba(128, 128, 128, 0.3);
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bank-chip:hover {
+  border-color: #18a058;
+}
+
+.bank-chip.active {
+  border-color: #18a058;
+  background: rgba(24, 160, 88, 0.12);
+  color: #18a058;
+  font-weight: 600;
 }
 
 .start-actions {

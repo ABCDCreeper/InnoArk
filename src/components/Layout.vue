@@ -17,6 +17,7 @@ import {
   LogOutOutline as LogOutIcon,
   MenuOutline as MenuIcon,
   TrophyOutline as TrophyIcon,
+  AlbumsOutline as AlbumsIcon,
 } from '@vicons/ionicons5'
 
 import { RouterLink, useRoute, useRouter } from 'vue-router'
@@ -35,7 +36,7 @@ const studentMenu: MenuDef[] = [
   { key: '/', title: '首页', icon: HomeIcon },
   { key: '/projects', title: '项目', icon: RocketIcon },
   { key: '/resources', title: '资源库', icon: CompassIcon },
-  { key: '/quiz', title: '知识闯关', icon: TrophyIcon },
+  { key: '/quiz', title: '闯关', icon: TrophyIcon },
   { key: '/focus', title: '专注', icon: TimerIcon },
   { key: '/settings', title: '设置', icon: SettingsIcon },
   { key: '/about', title: '关于', icon: AboutIcon },
@@ -44,6 +45,7 @@ const studentMenu: MenuDef[] = [
 const teacherMenu: MenuDef[] = [
   { key: '/', title: '首页', icon: HomeIcon },
   { key: '/teacher', title: '团队总览', icon: SchoolIcon },
+  { key: '/groups', title: '题库管理', icon: AlbumsIcon },
   { key: '/projects', title: '项目', icon: RocketIcon },
   { key: '/settings', title: '设置', icon: SettingsIcon },
   { key: '/about', title: '关于', icon: AboutIcon },

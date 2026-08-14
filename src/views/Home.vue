@@ -5,7 +5,7 @@ import {
   NCard, NGrid, NGridItem, NButton, NProgress, NTag, NSpace, NText, NStatistic, NIcon, NEmpty,
 } from 'naive-ui'
 import {
-  RocketOutline, CompassOutline, TimerOutline, SchoolOutline, ChevronForwardOutline, TrophyOutline,
+  RocketOutline, CompassOutline, TimerOutline, SchoolOutline, ChevronForwardOutline, TrophyOutline, AlbumsOutline,
 } from '@vicons/ionicons5'
 import { useAuthStore } from '../stores/auth'
 import { fetchProjects } from '../api/project'
@@ -32,12 +32,13 @@ onMounted(async () => {
 const quickLinks = [
   { label: '课题与项目', desc: '浏览课题、发起项目、组建小队', to: '/projects', icon: RocketOutline },
   { label: '资源库', desc: '跨学科资源导航与动态反馈', to: '/resources', icon: CompassOutline },
-  { label: '知识闯关', desc: '答题闯关，边玩边学涨知识', to: '/quiz', icon: TrophyOutline },
+  { label: '闯关', desc: '答题闯关，边玩边学涨知识', to: '/quiz', icon: TrophyOutline },
   { label: '专注', desc: '番茄钟 + 白板，沉浸式学习', to: '/focus', icon: TimerOutline },
 ]
 
 const teacherLinks = [
   { label: '团队总览', desc: '实时查看各组进度与动态', to: '/teacher', icon: SchoolOutline },
+  { label: '题库管理', desc: '分组维护闯关题库与成员', to: '/groups', icon: AlbumsOutline },
   { label: '课题与项目', desc: '浏览课题与项目档案', to: '/projects', icon: RocketOutline },
 ]
 

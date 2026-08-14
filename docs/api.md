@@ -223,7 +223,9 @@
 
 ```json
 {
-  "id": "q1", "category": "物理", "difficulty": 1,
+  "id": "q1", "groupId": null, "createdBy": null,
+  "createdAt": null, "updatedAt": null,
+  "category": "物理", "difficulty": 1,
   "question": "火星沙尘暴期间，到达地面的阳光最多会减少约多少？",
   "options": ["5% 左右", "20% 左右", "60% 左右", "90% 以上"],
   "answer": 2, "explanation": "火星全球性沙尘暴可遮挡约 60% 的阳光……"
@@ -232,13 +234,35 @@
 
 - `options`：4 个选项（JSON 数组），`answer`：正确选项下标（0 起）
 - `category`：`物理` | `工程` | `编程` | `生物` | `综合`；`difficulty`：1~3
-- `explanation`：答案解析（正误原因），题目由后端题库随机抽取
+- `explanation`：答案解析（正误原因）
+- `groupId`：所属用户组，`null` 表示公共题库（种子题）；`createdBy/createdAt/updatedAt` 仅组内题目有值
 
 ### 2.15 QuizAttempt 闯关成绩
 
 ```json
 { "id": "qa1", "userId": "u1", "score": 80, "total": 100, "createdAt": "…" }
 ```
+
+### 2.16 Group 用户组
+
+```json
+{
+  "id": "g1", "name": "火星能源课题小组", "description": "…",
+  "quizMode": "fallback", "memberCount": 4, "questionCount": 5,
+  "createdAt": "…", "updatedAt": "…"
+}
+```
+
+- `quizMode` 抽题机制：`group` 只用组内题库 | `fallback` 组内为空回退公共 | `mixed` 组内与公共混合
+- `memberCount` / `questionCount` 为统计字段（仅列表/详情返回）
+
+### 2.17 GroupMember 用户组成员
+
+```json
+{ "id": "gm1", "groupId": "g1", "userId": "u1", "role": "member", "name": "张三", "username": "student", "joinedAt": "…" }
+```
+
+`role`：`teacher`（负责老师，可管理该组）| `member`（组内学生）。一个用户组可有多个负责老师，一个学生可同时属于多个组。
 
 ---
 
@@ -536,15 +560,23 @@
 
 响应 `200`：`Archive`（见 2.13）。错误：`409 PROJECT_NOT_FINISHED`（未结题）。
 
-### 3.10 知识闯关
+### 3.10 闯关（知识问答）
 
-#### `GET /api/quiz/questions?count=10` — 随机抽题
+#### `GET /api/quiz/questions?group=<id>&count=10` — 按题库抽题
 
-`count`：抽取数量（默认 10，上限 20）。响应 `200`：
+- `count`：抽取数量（默认 10，上限 20）
+- `group`：用户组 id（可选）。省略时使用**公共题库**；传入时必须是自己所在的组（否则 `403`），并按该组的 `quizMode` 抽题：
+  - `group`：只用组内题库（组内为空则返回空）
+  - `fallback`：组内为空时回退公共题库
+  - `mixed`：组内与公共题库合并后抽样
+
+响应 `200`：
 
 ```json
-{ "items": [ /* QuizQuestion[] */ ], "total": 20 }
+{ "items": [ /* QuizQuestion[] */ ], "total": 21, "group": { "id": "g1", "name": "火星能源课题小组" } }
 ```
+
+`total` 为该题库（合并后）全部题数；`group` 为 `null` 时表示公共题库。
 
 #### `POST /api/quiz/attempts` — 记录一局成绩
 
@@ -573,6 +605,65 @@
 ```
 
 `best` / `last` 无记录时为 `null`。
+
+### 3.11 用户组与题库管理
+
+权限模型：**建组/搜索用户** = 任意教师；**管理（改名、删组、成员、出题）** = 组内的负责老师（`role=teacher`）；学生仅可通过 3.10 玩自己所在组的题库。
+
+#### `GET /api/groups` — 我负责管理的用户组（仅教师）
+
+响应 `200`：`{ "items": [ /* Group[]（含 memberCount/questionCount） */ ] }`。错误：`403`。
+
+#### `GET /api/groups/mine` — 我所在的用户组（学生）
+
+响应 `200`：`{ "items": [ { "id": "g1", "name": "火星能源课题小组" } ] }`
+
+#### `POST /api/groups` — 新建用户组（仅教师）
+
+请求：`{ "name": "…", "description": "…", "quizMode": "fallback" }`（`quizMode` 默认 `group`）。
+响应 `201`：`Group`。创建者自动成为该组负责老师。错误：`403`、`400`。
+
+#### `PATCH /api/groups/:id` — 修改组（名称/描述/抽题机制，仅负责老师）
+
+响应 `200`：`Group`。错误：`403`、`400`、`404`。
+
+#### `DELETE /api/groups/:id` — 删除组（仅负责老师）
+
+连带删除组内成员关系与组内题目。响应 `204`。
+
+#### `GET /api/groups/:id/members` — 成员列表（仅负责老师）
+
+响应 `200`：`{ "items": [ /* GroupMember[] */ ] }`（负责老师在前）。
+
+#### `POST /api/groups/:id/members` — 添加成员（仅负责老师）
+
+请求：`{ "userId": "u4", "role": "member" }`（`role`：`teacher` 负责老师 | `member` 学生）。
+响应 `201`：`GroupMember`。错误：`409 ALREADY_MEMBER`、`404`（用户不存在）、`403`、`400`。
+
+#### `DELETE /api/groups/:id/members/:userId` — 移除成员（仅负责老师）
+
+组内至少保留一名负责老师。响应 `204`。错误：`400`（最后一个老师）、`404`、`403`。
+
+#### `GET /api/groups/:id/questions` — 组内题库（仅负责老师）
+
+响应 `200`：`{ "items": [ /* QuizQuestion[] */ ] }`（按更新时间倒序）。
+
+#### `POST /api/groups/:id/questions` — 出题（仅负责老师）
+
+请求：`{ "question": "…", "category": "物理", "difficulty": 1, "options": ["…", "…", "…", "…"], "answer": 2, "explanation": "…" }`
+响应 `201`：`QuizQuestion`（含 `groupId`/`createdBy` 等）。错误：`400`（校验见 §2.14）、`403`。
+
+#### `PATCH /api/groups/:id/questions/:qid` — 改题（仅负责老师）
+
+请求体同出题（全量）。响应 `200`：`QuizQuestion`。
+
+#### `DELETE /api/groups/:id/questions/:qid` — 删题（仅负责老师）
+
+响应 `204`。
+
+#### `GET /api/users?keyword=` — 搜索用户（仅教师，添加成员用）
+
+按用户名/姓名模糊匹配（大小写不敏感），最多 20 条。响应 `200`：`{ "items": [ { "id", "username", "name", "role" } ] }`。错误：`403`。
 
 ---
 

@@ -29,6 +29,12 @@ const routes = [
         component: () => import('../views/TeacherBoard.vue'),
         meta: { roles: ['teacher'] },
       },
+      {
+        path: 'groups',
+        name: 'GroupBank',
+        component: () => import('../views/GroupBank.vue'),
+        meta: { roles: ['teacher'] },
+      },
       { path: 'settings', name: 'Settings', component: () => import('../views/Settings.vue') },
       { path: 'about', name: 'About', component: () => import('../views/About.vue') },
     ],
