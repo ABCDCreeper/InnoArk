@@ -118,6 +118,30 @@ export interface FocusSession {
   createdAt: string
 }
 
+export interface QuizQuestion {
+  id: string
+  category: string
+  difficulty: number
+  question: string
+  options: string[]
+  answer: number
+  explanation: string
+}
+
+export interface QuizAttempt {
+  id: string
+  userId: string
+  score: number
+  total: number
+  createdAt: string
+}
+
+export interface QuizStats {
+  attempts: number
+  best: { score: number; total: number; createdAt: string } | null
+  last: { score: number; total: number; createdAt: string } | null
+}
+
 export interface FocusStats {
   today: { count: number; minutes: number }
   week: Array<{ date: string; count: number; minutes: number }>

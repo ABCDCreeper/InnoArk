@@ -219,6 +219,27 @@
 }
 ```
 
+### 2.14 QuizQuestion 闯关题目
+
+```json
+{
+  "id": "q1", "category": "物理", "difficulty": 1,
+  "question": "火星沙尘暴期间，到达地面的阳光最多会减少约多少？",
+  "options": ["5% 左右", "20% 左右", "60% 左右", "90% 以上"],
+  "answer": 2, "explanation": "火星全球性沙尘暴可遮挡约 60% 的阳光……"
+}
+```
+
+- `options`：4 个选项（JSON 数组），`answer`：正确选项下标（0 起）
+- `category`：`物理` | `工程` | `编程` | `生物` | `综合`；`difficulty`：1~3
+- `explanation`：答案解析（正误原因），题目由后端题库随机抽取
+
+### 2.15 QuizAttempt 闯关成绩
+
+```json
+{ "id": "qa1", "userId": "u1", "score": 80, "total": 100, "createdAt": "…" }
+```
+
 ---
 
 ## 3. 接口清单
@@ -514,6 +535,44 @@
 #### `GET /api/projects/:id/archive` — 科创档案（派生资源）
 
 响应 `200`：`Archive`（见 2.13）。错误：`409 PROJECT_NOT_FINISHED`（未结题）。
+
+### 3.10 知识闯关
+
+#### `GET /api/quiz/questions?count=10` — 随机抽题
+
+`count`：抽取数量（默认 10，上限 20）。响应 `200`：
+
+```json
+{ "items": [ /* QuizQuestion[] */ ], "total": 20 }
+```
+
+#### `POST /api/quiz/attempts` — 记录一局成绩
+
+请求：
+
+```json
+{ "score": 80, "total": 100 }
+```
+
+- `score` / `total`：整数，`0 ≤ score ≤ total`
+
+响应 `201`：`{ "attempt": QuizAttempt, "best": { score, total, createdAt } | null }`（`best` 为该用户历史最佳）。
+
+错误：`400 VALIDATION_ERROR`。
+
+#### `GET /api/quiz/stats` — 我的闯关统计
+
+响应 `200`：
+
+```json
+{
+  "attempts": 5,
+  "best": { "score": 90, "total": 100, "createdAt": "…" },
+  "last": { "score": 80, "total": 100, "createdAt": "…" }
+}
+```
+
+`best` / `last` 无记录时为 `null`。
 
 ---
 
