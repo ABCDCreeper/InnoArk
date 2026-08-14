@@ -71,7 +71,7 @@ async function save() {
 <style scoped>
 .md-preview {
   border: 1px solid rgba(128, 128, 128, 0.2);
-  border-radius: 6px;
+  border-radius: 12px;
   padding: 10px 12px;
   min-height: 240px;
   font-size: 13px;
@@ -111,14 +111,14 @@ async function save() {
 
 .md-preview :deep(code) {
   background: rgba(128, 128, 128, 0.12);
-  border-radius: 3px;
+  border-radius: 4px;
   padding: 1px 4px;
   font-size: 12px;
 }
 
 .md-preview :deep(pre) {
   background: rgba(128, 128, 128, 0.1);
-  border-radius: 6px;
+  border-radius: 10px;
   padding: 8px 10px;
   overflow-x: auto;
 }

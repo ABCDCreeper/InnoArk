@@ -298,7 +298,7 @@ function selectNode(id: string) {
   align-items: center;
   gap: 2px;
   padding: 2px;
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--n-color, rgba(255, 255, 255, 0.85));
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }

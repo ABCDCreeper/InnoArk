@@ -62,7 +62,7 @@ function shortDate(date: string) {
   display: flex;
   align-items: flex-end;
   background: rgba(128, 128, 128, 0.1);
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
   min-height: 30px;
 }
@@ -70,7 +70,7 @@ function shortDate(date: string) {
 .bar {
   width: 100%;
   background: linear-gradient(180deg, #36ad6a, #18a058);
-  border-radius: 6px;
+  border-radius: 8px;
   transition: height 0.3s ease;
 }
 </style>

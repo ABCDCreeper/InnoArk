@@ -83,6 +83,7 @@ const handleLogin = async () => {
 .login-card {
   width: 420px;
   max-width: 92vw;
+  border-radius: 20px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
 

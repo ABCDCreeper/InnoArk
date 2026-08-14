@@ -176,7 +176,7 @@ onBeforeUnmount(onPointerUp)
   position: absolute;
   width: 180px;
   min-height: 110px;
-  border-radius: 4px;
+  border-radius: 6px;
   padding: 10px 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   cursor: grab;
