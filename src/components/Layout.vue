@@ -51,12 +51,22 @@ const teacherMenu: MenuDef[] = [
   { key: '/about', title: '关于', icon: AboutIcon },
 ]
 
+const managerMenu: MenuDef[] = [
+  { key: '/', title: '首页', icon: HomeIcon },
+  { key: '/admin/users', title: '用户管理', icon: PeopleIcon },
+  { key: '/groups', title: '题库管理', icon: AlbumsIcon },
+  { key: '/teacher', title: '团队总览', icon: SchoolIcon },
+  { key: '/projects', title: '项目', icon: RocketIcon },
+  { key: '/settings', title: '设置', icon: SettingsIcon },
+  { key: '/about', title: '关于', icon: AboutIcon },
+]
+
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) })
 }
 
 const fullOptions = computed(() => {
-  const defs = auth.isTeacher ? teacherMenu : studentMenu
+  const defs = auth.isManager ? managerMenu : auth.isTeacher ? teacherMenu : studentMenu
   return defs.map((d) => ({ key: d.key, icon: renderIcon(d.icon), label: () => h(RouterLink, { to: d.key }, { default: () => d.title }) }))
 })
 
@@ -65,8 +75,21 @@ const menuKey = computed(() => {
   return route.path
 })
 
-const roleLabel = computed(() => (auth.isTeacher ? '教师' : '学生'))
-const roleType = computed(() => (auth.isTeacher ? 'warning' : 'success'))
+const ROLE_LABEL: Record<string, string> = {
+  superadmin: '超级管理员',
+  admin: '管理员',
+  schooladmin: '校管理员',
+  teacher: '教师',
+  student: '学生',
+}
+const roleLabel = computed(() => ROLE_LABEL[auth.user?.role ?? ''] ?? '')
+const roleType = computed(() => {
+  const role = auth.user?.role
+  if (role === 'superadmin') return 'error'
+  if (role === 'admin') return 'warning'
+  if (role === 'schooladmin') return 'info'
+  return auth.isTeacher ? 'success' : 'default'
+})
 
 const handleLogout = async () => {
   await auth.logout()

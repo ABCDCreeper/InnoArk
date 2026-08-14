@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { NCard, NForm, NFormItem, NInput, NButton, NSpace, NTabs, NTabPane, NText, NA, useMessage } from 'naive-ui'
+import { NCard, NForm, NFormItem, NInput, NButton, NSpace, NText, NA, useMessage } from 'naive-ui'
 import { useAuthStore } from '../stores/auth'
 import { ApiError } from '../api/request'
 
@@ -9,8 +9,6 @@ const router = useRouter()
 const route = useRoute()
 const message = useMessage()
 const auth = useAuthStore()
-
-const role = ref<'student' | 'teacher'>('student')
 
 const formValue = ref({
   username: '',
@@ -38,59 +36,30 @@ const handleLogin = async () => {
     loading.value = false
   }
 }
-
-const switchRole = (value: string) => {
-  role.value = value as 'student' | 'teacher'
-  formValue.value.username = ''
-  formValue.value.password = ''
-}
 </script>
 
 <template>
   <div class="login-container">
     <n-card title="智创方舟 InnoArk" subtitle="智能跨学科学习平台" class="login-card" size="large">
-      <n-tabs v-model:value="role" type="line" animated @update:value="switchRole">
-        <n-tab-pane name="student" tab="学生">
-          <n-form :model="formValue" :rules="rules" @submit.prevent="handleLogin">
-            <n-form-item path="username" label="用户名">
-              <n-input v-model:value="formValue.username" placeholder="示例账号: student" @keydown.enter="handleLogin" />
-            </n-form-item>
-            <n-form-item path="password" label="密码">
-              <n-input
-                v-model:value="formValue.password"
-                type="password"
-                show-password-on="mousedown"
-                placeholder="示例密码: 123456"
-                @keydown.enter="handleLogin"
-              />
-            </n-form-item>
-            <n-button type="primary" attr-type="submit" size="large" block :loading="loading" style="margin-top: 8px;">
-              登录
-            </n-button>
-          </n-form>
-        </n-tab-pane>
-        <n-tab-pane name="teacher" tab="教师">
-          <n-form :model="formValue" :rules="rules" @submit.prevent="handleLogin">
-            <n-form-item path="username" label="用户名">
-              <n-input v-model:value="formValue.username" placeholder="示例账号: teacher" @keydown.enter="handleLogin" />
-            </n-form-item>
-            <n-form-item path="password" label="密码">
-              <n-input
-                v-model:value="formValue.password"
-                type="password"
-                show-password-on="mousedown"
-                placeholder="示例密码: 123456"
-                @keydown.enter="handleLogin"
-              />
-            </n-form-item>
-            <n-button type="primary" attr-type="submit" size="large" block :loading="loading" style="margin-top: 8px;">
-              登录
-            </n-button>
-          </n-form>
-        </n-tab-pane>
-      </n-tabs>
+      <n-form :model="formValue" :rules="rules" @submit.prevent="handleLogin">
+        <n-form-item path="username" label="用户名">
+          <n-input v-model:value="formValue.username" placeholder="请输入用户名" @keydown.enter="handleLogin" />
+        </n-form-item>
+        <n-form-item path="password" label="密码">
+          <n-input
+            v-model:value="formValue.password"
+            type="password"
+            show-password-on="mousedown"
+            placeholder="请输入密码"
+            @keydown.enter="handleLogin"
+          />
+        </n-form-item>
+        <n-button type="primary" attr-type="submit" size="large" block :loading="loading" style="margin-top: 8px;">
+          登录
+        </n-button>
+      </n-form>
       <n-space justify="center" style="margin-top: 12px;">
-        <n-text depth="3" style="font-size: 12px;">演示账号：student/123456 · teacher/123456</n-text>
+        <n-text depth="3" style="font-size: 12px;">演示账号：student / teacher / schooladmin / admin / superadmin（密码均 123456）</n-text>
       </n-space>
       <n-space justify="center" style="margin-top: 4px;">
         <n-text depth="3" style="font-size: 13px;">

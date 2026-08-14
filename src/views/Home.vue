@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NCard, NGrid, NGridItem, NButton, NProgress, NTag, NSpace, NText, NStatistic, NIcon, NEmpty, useMessage,
 } from 'naive-ui'
 import {
   RocketOutline, CompassOutline, TimerOutline, SchoolOutline, ChevronForwardOutline, TrophyOutline, AlbumsOutline,
+  PeopleOutline,
 } from '@vicons/ionicons5'
 import { useAuthStore } from '../stores/auth'
 import { fetchProjects } from '../api/project'
@@ -71,7 +72,16 @@ const teacherLinks = [
   { label: '课题与项目', desc: '浏览课题与项目档案', to: '/projects', icon: RocketOutline },
 ]
 
-const links = auth.isTeacher ? teacherLinks : quickLinks
+const managerLinks = [
+  { label: '用户管理', desc: '管理账号、角色与权限', to: '/admin/users', icon: PeopleOutline },
+  ...teacherLinks,
+]
+
+const links = computed(() => {
+  if (auth.isManager) return managerLinks
+  if (auth.isTeacher) return teacherLinks
+  return quickLinks
+})
 
 const greeting = () => {
   const hour = new Date().getHours()

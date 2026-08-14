@@ -1,4 +1,4 @@
-export type Role = 'student' | 'teacher'
+export type Role = 'student' | 'teacher' | 'schooladmin' | 'admin' | 'superadmin'
 export type ProjectStatus = 'active' | 'finished'
 export type TaskStatus = 'todo' | 'doing' | 'review' | 'done'
 

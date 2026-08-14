@@ -6,6 +6,8 @@ import type { Role, User } from '../api/types'
 const TOKEN_KEY = 'innoark_token'
 const USER_KEY = 'innoark_user'
 
+export const ROLE_RANK: Record<Role, number> = { student: 0, teacher: 1, schooladmin: 2, admin: 3, superadmin: 4 }
+
 function loadUser(): User | null {
   try {
     return JSON.parse(localStorage.getItem(USER_KEY) || 'null')
@@ -19,7 +21,9 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(loadUser())
 
   const isAuthenticated = computed(() => !!token.value)
-  const isTeacher = computed(() => user.value?.role === 'teacher')
+  const roleRank = computed(() => (user.value ? ROLE_RANK[user.value.role] : -1))
+  const isTeacher = computed(() => roleRank.value >= 1)
+  const isManager = computed(() => roleRank.value >= 2)
 
   async function login(username: string, password: string) {
     const res = await apiLogin(username, password)
@@ -50,5 +54,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem(USER_KEY)
   }
 
-  return { token, user, isAuthenticated, isTeacher, login, register, logout }
+  return { token, user, isAuthenticated, isTeacher, isManager, roleRank, login, register, logout }
 })
