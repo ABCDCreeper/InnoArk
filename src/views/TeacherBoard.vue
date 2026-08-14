@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  NCard, NGrid, NGridItem, NButton, NTag, NSpace, NText, NProgress, NEmpty, NAvatarGroup, NIcon,
+  NCard, NGrid, NGridItem, NButton, NTag, NSpace, NText, NProgress, NEmpty, NAvatar, NIcon,
   NRadioGroup, NRadioButton,
 } from 'naive-ui'
 import { ChevronForwardOutline } from '@vicons/ionicons5'
@@ -43,6 +43,13 @@ function formatTime(iso: string) {
 }
 
 const activeCount = () => projects.value.filter((p) => p.status === 'active').length
+
+const AVATAR_COLORS = ['#18a058', '#2080f0', '#f0a020', '#e88080', '#8a7ff0', '#0f9f9f', '#d03050']
+function avatarColor(name: string) {
+  let h = 0
+  for (const ch of name) h = (h * 31 + (ch.codePointAt(0) ?? 0)) % 997
+  return AVATAR_COLORS[h % AVATAR_COLORS.length]
+}
 </script>
 
 <template>
@@ -83,12 +90,18 @@ const activeCount = () => projects.value.filter((p) => p.status === 'active').le
             </n-space>
             <n-progress type="line" :percentage="p.progress.total === 0 ? 0 : Math.round((p.progress.done / p.progress.total) * 100)" :height="10" />
             <n-space align="center" justify="space-between">
-              <n-avatar-group :options="p.members.map((m) => ({ name: m.name, src: '' }))" :size="24" />
+              <div class="member-avatars">
+                <n-avatar v-for="m in p.members" :key="m.id" round :size="24" :style="{ backgroundColor: avatarColor(m.name), color: '#fff' }">
+                  {{ m.name.charAt(0) }}
+                </n-avatar>
+              </div>
               <n-text depth="3" style="font-size: 12px;">最近更新 {{ formatTime(p.updatedAt) }}</n-text>
             </n-space>
-            <n-button size="small" type="primary" ghost block @click.stop="router.push(`/project/${p.id}`)" style="display: flex; justify-content: space-between; align-items: center;">
-              查看项目 <n-icon size="14"><chevron-forward-outline /></n-icon>
-            </n-button>
+            <n-space justify="end">
+              <n-button size="small" type="primary" ghost @click.stop="router.push(`/project/${p.id}`)">
+                查看项目 <n-icon size="14"><chevron-forward-outline /></n-icon>
+              </n-button>
+            </n-space>
           </n-space>
         </n-card>
       </n-grid-item>
