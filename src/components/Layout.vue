@@ -22,13 +22,11 @@ import {
 
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { useSettingsStore } from '../stores/settings'
 import FloatingPomodoro from './FloatingPomodoro.vue'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
-const settings = useSettingsStore()
 
 interface MenuDef { key: string; title: string; icon: Component }
 
@@ -55,27 +53,9 @@ function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) })
 }
 
-function renderCompactLabel(def: MenuDef) {
-  return () =>
-    h(
-      NPopover,
-      { trigger: 'hover', placement: 'bottom' },
-      {
-        trigger: () => h(RouterLink, { to: def.key }, { default: () => h(NIcon, { size: 18 }, { default: () => h(def.icon) }) }),
-        default: () => def.title,
-      },
-    )
-}
-
 const fullOptions = computed(() => {
   const defs = auth.isTeacher ? teacherMenu : studentMenu
   return defs.map((d) => ({ key: d.key, icon: renderIcon(d.icon), label: () => h(RouterLink, { to: d.key }, { default: () => d.title }) }))
-})
-
-const headerOptions = computed(() => {
-  if (!compactHeader.value) return fullOptions.value
-  const defs = auth.isTeacher ? teacherMenu : studentMenu
-  return defs.map((d) => ({ key: d.key, label: renderCompactLabel(d) }))
 })
 
 const menuKey = computed(() => {
@@ -92,13 +72,11 @@ const handleLogout = async () => {
 }
 
 const isMobile = ref(false)
-const compactHeader = ref(false)
 const mobileMenuOpen = ref(false)
 const siderCollapsed = ref(false)
 
 function updateViewport() {
   isMobile.value = window.innerWidth < 768
-  compactHeader.value = window.innerWidth < 1024
 }
 
 function onResize() { updateViewport() }
@@ -117,10 +95,6 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
       </n-button>
       <div class="app-logo">
         <span class="logo-text">InnoArk</span>
-      </div>
-
-      <div class="header-menu-area">
-        <n-menu v-if="!settings.sidebarMode && !isMobile" :value="menuKey" mode="horizontal" :options="headerOptions" />
       </div>
 
       <div class="header-user-area">
@@ -146,7 +120,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
     </n-layout-header>
 
     <n-layout has-sider style="height: calc(100vh - 64px - 50px);">
-      <n-layout-sider v-if="settings.sidebarMode && !isMobile" bordered collapse-mode="width" :collapsed-width="64" :width="220" show-trigger v-model:collapsed="siderCollapsed">
+      <n-layout-sider v-if="!isMobile" bordered collapse-mode="width" :collapsed-width="64" :width="220" show-trigger v-model:collapsed="siderCollapsed">
         <n-menu :value="menuKey" :options="fullOptions" :collapsed="siderCollapsed" :collapsed-width="64" :collapsed-icon-size="20" />
       </n-layout-sider>
 
@@ -193,24 +167,6 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-}
-
-.header-menu-area {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-width: 0;
-  height: 100%;
-}
-
-.header-menu-area .n-menu {
-  --n-font-size: 13px !important;
-  height: 100%;
-  display: flex;
-  align-items: center;
 }
 
 .header-user-area {
