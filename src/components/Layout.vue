@@ -113,7 +113,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 </script>
 
 <template>
-  <n-layout style="height: 100vh;">
+  <n-layout style="height: 100vh;" content-style="padding: 12px; display: flex; flex-direction: column; gap: 12px;">
     <n-layout-header bordered class="app-header">
       <n-button v-if="isMobile" quaternary size="small" @click="mobileMenuOpen = true">
         <template #icon><n-icon size="22"><menu-icon /></n-icon></template>
@@ -144,8 +144,8 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
       </div>
     </n-layout-header>
 
-    <n-layout has-sider style="height: calc(100vh - 64px - 50px);">
-      <n-layout-sider v-if="!isMobile" bordered collapse-mode="width" :collapsed-width="64" :width="220" show-trigger v-model:collapsed="siderCollapsed">
+    <n-layout has-sider style="flex: 1; min-height: 0; gap: 12px;">
+      <n-layout-sider v-if="!isMobile" bordered collapse-mode="width" :collapsed-width="64" :width="220" show-trigger v-model:collapsed="siderCollapsed" class="app-sider">
         <n-menu :value="menuKey" :options="fullOptions" :collapsed="siderCollapsed" :collapsed-width="64" :collapsed-icon-size="20" />
       </n-layout-sider>
 
@@ -154,7 +154,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
       </n-layout-content>
     </n-layout>
 
-    <n-layout-footer bordered style="height: 50px; display: flex; align-items: center; justify-content: center;">
+    <n-layout-footer bordered class="app-footer" style="height: 50px; display: flex; align-items: center; justify-content: center;">
       <n-text depth="3" style="font-size: 12px;">© 2026 智创方舟 InnoArk</n-text>
     </n-layout-footer>
   </n-layout>
@@ -176,6 +176,15 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
   align-items: center;
   gap: 12px;
   position: relative;
+  border-radius: 16px;
+}
+
+.app-sider {
+  border-radius: 16px;
+}
+
+.app-footer {
+  border-radius: 16px;
 }
 
 .app-logo {
@@ -224,6 +233,11 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
   }
   .app-logo {
     flex: 1;
+  }
+  .app-header,
+  .app-sider,
+  .app-footer {
+    border-radius: 12px;
   }
 }
 </style>
