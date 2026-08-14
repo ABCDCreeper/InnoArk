@@ -181,6 +181,11 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 
 .app-sider {
   border-radius: 16px;
+  box-shadow: inset -1px 0 0 var(--n-border-color);
+}
+
+.app-sider .n-layout-sider-border {
+  display: none;
 }
 
 .app-footer {
