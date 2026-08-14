@@ -13,7 +13,13 @@ export interface QuestionBody {
 export interface MyGroup {
   id: string
   name: string
+  description: string
   quizMode: QuizMode
+  memberCount: number
+  questionCount: number
+  projectCount: number
+  createdAt: string
+  updatedAt: string
 }
 
 export function fetchMyGroups() {

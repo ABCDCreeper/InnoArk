@@ -22,6 +22,7 @@ const routes = [
       { path: 'project/:id', name: 'ProjectDetail', component: () => import('../views/ProjectDetail.vue'), props: true },
       { path: 'resources', name: 'Resources', component: () => import('../views/Resources.vue') },
       { path: 'quiz', name: 'Quiz', component: () => import('../views/Quiz.vue') },
+      { path: 'my-groups', name: 'MyGroups', component: () => import('../views/MyGroups.vue') },
       { path: 'focus', name: 'Focus', component: () => import('../views/Focus.vue') },
       {
         path: 'teacher',

@@ -18,6 +18,7 @@ import {
   MenuOutline as MenuIcon,
   TrophyOutline as TrophyIcon,
   AlbumsOutline as AlbumsIcon,
+  PeopleOutline as PeopleIcon,
 } from '@vicons/ionicons5'
 
 import { RouterLink, useRoute, useRouter } from 'vue-router'
@@ -35,6 +36,7 @@ const studentMenu: MenuDef[] = [
   { key: '/projects', title: '项目', icon: RocketIcon },
   { key: '/resources', title: '资源库', icon: CompassIcon },
   { key: '/quiz', title: '闯关', icon: TrophyIcon },
+  { key: '/my-groups', title: '我的分组', icon: PeopleIcon },
   { key: '/focus', title: '专注', icon: TimerIcon },
   { key: '/settings', title: '设置', icon: SettingsIcon },
   { key: '/about', title: '关于', icon: AboutIcon },
