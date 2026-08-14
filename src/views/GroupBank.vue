@@ -2,17 +2,18 @@
 import { computed, onMounted, ref } from 'vue'
 import {
   NCard, NButton, NSpace, NText, NTag, NGrid, NGridItem, NEmpty, NIcon, NModal, NInput, NRadioGroup,
-  NRadioButton, NRadio, NInputNumber, NSelect, NTabs, NTabPane, NSpin, NAvatar, useMessage, useDialog,
+  NRadioButton, NRadio, NInputNumber, NSelect, NTabs, NTabPane, NSpin, NAvatar, NDivider, useMessage, useDialog,
 } from 'naive-ui'
-import { AddOutline, CreateOutline, TrashOutline, SearchOutline, CloseOutline } from '@vicons/ionicons5'
+import { AddOutline, CreateOutline, TrashOutline, SearchOutline, CloseOutline, CopyOutline } from '@vicons/ionicons5'
 import {
   fetchGroups, createGroup, updateGroup, deleteGroup,
   fetchGroupMembers, addGroupMember, removeGroupMember,
   fetchGroupQuestions, createGroupQuestion, updateGroupQuestion, deleteGroupQuestion,
+  fetchGroupInvites, sendGroupInvite, withdrawGroupInvite,
   searchUsers, type QuestionBody,
 } from '../api/group'
 import { ApiError } from '../api/request'
-import type { GroupMember, QuizGroup, QuizMode, QuizQuestion, UserBrief } from '../api/types'
+import type { GroupInvite, GroupMember, QuizGroup, QuizMode, QuizQuestion, UserBrief } from '../api/types'
 
 const message = useMessage()
 const dialog = useDialog()
@@ -21,6 +22,7 @@ const groups = ref<QuizGroup[]>([])
 const loading = ref(true)
 const selectedId = ref<string | null>(null)
 const members = ref<GroupMember[]>([])
+const pendingInvites = ref<GroupInvite[]>([])
 const questions = ref<QuizQuestion[]>([])
 const panelLoading = ref(false)
 
@@ -53,9 +55,14 @@ async function loadPanel() {
   if (!selectedId.value) return
   panelLoading.value = true
   try {
-    const [m, q] = await Promise.all([fetchGroupMembers(selectedId.value), fetchGroupQuestions(selectedId.value)])
+    const [m, q, pi] = await Promise.all([
+      fetchGroupMembers(selectedId.value),
+      fetchGroupQuestions(selectedId.value),
+      fetchGroupInvites(selectedId.value),
+    ])
     members.value = m.items
     questions.value = q.items
+    pendingInvites.value = pi.items
   } catch (err) {
     message.error(err instanceof ApiError ? err.message : '加载失败')
   } finally {
@@ -163,15 +170,46 @@ async function addMember(u: UserBrief) {
   if (!selectedId.value) return
   memberAdding.value = true
   try {
-    await addGroupMember(selectedId.value, u.id, memberRole.value)
-    message.success(`已添加 ${u.name}`)
+    if (memberRole.value === 'member') {
+      await sendGroupInvite(selectedId.value, u.id)
+      message.success(`已向 ${u.name} 发送邀请，等学生确认`)
+    } else {
+      await addGroupMember(selectedId.value, u.id, 'teacher')
+      message.success(`已添加 ${u.name}`)
+    }
     await loadPanel()
     await load()
   } catch (err) {
-    message.error(err instanceof ApiError ? err.message : '添加失败')
+    message.error(err instanceof ApiError ? err.message : '操作失败')
   } finally {
     memberAdding.value = false
   }
+}
+
+function copyInvite(g: QuizGroup) {
+  navigator.clipboard
+    .writeText(g.inviteCode)
+    .then(() => message.success(`邀请码已复制：${g.inviteCode}`))
+    .catch(() => message.error('复制失败'))
+}
+
+function withdrawInvite(iv: GroupInvite) {
+  if (!selectedId.value) return
+  dialog.warning({
+    title: '撤回邀请',
+    content: `撤回发给「${iv.name}」的入组邀请？`,
+    positiveText: '撤回',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        await withdrawGroupInvite(selectedId.value!, iv.id)
+        message.success('邀请已撤回')
+        await loadPanel()
+      } catch (err) {
+        message.error(err instanceof ApiError ? err.message : '撤回失败')
+      }
+    },
+  })
 }
 
 function removeMember(m: GroupMember) {
@@ -315,8 +353,12 @@ function removeQuestion(q: QuizQuestion) {
                     <n-text strong>{{ g.name }}</n-text>
                     <n-tag size="tiny" :bordered="false" type="info">{{ MODE_LABEL[g.quizMode] }}</n-tag>
                   </n-space>
-                  <n-text depth="3" style="font-size: 12px;">👥 {{ g.memberCount }} 人 · 📝 {{ g.questionCount }} 题</n-text>
+                  <n-text depth="3" style="font-size: 12px;">👥 {{ g.memberCount }} 人 · 📝 {{ g.questionCount }} 题 · 📁 {{ g.projectCount }} 项目</n-text>
                   <n-text v-if="g.description" depth="3" style="font-size: 12px;">{{ g.description }}</n-text>
+                  <n-button size="tiny" quaternary type="primary" style="justify-content: flex-start; padding-left: 0;" @click.stop="copyInvite(g)">
+                    <template #icon><n-icon><copy-outline /></n-icon></template>
+                    邀请码 {{ g.inviteCode }}
+                  </n-button>
                 </n-space>
                 <n-space>
                   <n-button size="tiny" quaternary @click.stop="openGroupModal(g)">
@@ -348,7 +390,7 @@ function removeQuestion(q: QuizQuestion) {
                     添加成员
                   </n-button>
                 </n-space>
-                <n-empty v-if="members.length === 0" description="暂无成员" style="padding: 16px 0;" />
+                <n-empty v-if="members.length === 0 && pendingInvites.length === 0" description="暂无成员" style="padding: 16px 0;" />
                 <div v-for="m in members" :key="m.id" class="member-row">
                   <n-avatar round size="small" :style="{ backgroundColor: m.role === 'teacher' ? '#f0a020' : '#18a058' }">
                     {{ m.name.slice(0, 1) }}
@@ -364,6 +406,23 @@ function removeQuestion(q: QuizQuestion) {
                     <template #icon><n-icon><close-outline /></n-icon></template>
                   </n-button>
                 </div>
+                <template v-if="pendingInvites.length > 0">
+                  <n-divider style="margin: 8px 0;" />
+                  <n-text depth="3" style="font-size: 12px;">邀请中（等待学生确认）</n-text>
+                  <div v-for="iv in pendingInvites" :key="iv.id" class="member-row">
+                    <n-avatar round size="small" style="background-color: #2080f0;">
+                      {{ iv.name.slice(0, 1) }}
+                    </n-avatar>
+                    <div class="member-info">
+                      <n-text strong style="font-size: 13px;">{{ iv.name }}</n-text>
+                      <n-text depth="3" style="font-size: 12px;">@{{ iv.username }}</n-text>
+                    </div>
+                    <n-tag size="tiny" type="info" :bordered="false">待确认</n-tag>
+                    <n-button size="tiny" quaternary type="error" @click="withdrawInvite(iv)">
+                      <template #icon><n-icon><close-outline /></n-icon></template>
+                    </n-button>
+                  </div>
+                </template>
               </n-tab-pane>
 
               <n-tab-pane name="questions" tab="题库管理">
@@ -459,8 +518,8 @@ function removeQuestion(q: QuizQuestion) {
               <n-text strong style="font-size: 13px;">{{ u.name }}</n-text>
               <n-text depth="3" style="font-size: 12px;">@{{ u.username }} · {{ u.role === 'teacher' ? '老师' : '学生' }}</n-text>
             </div>
-            <n-button size="tiny" type="primary" ghost :disabled="memberIds.has(u.id)" @click="addMember(u)">
-              {{ memberIds.has(u.id) ? '已在组内' : '添加' }}
+            <n-button size="tiny" type="primary" ghost :disabled="memberIds.has(u.id)" :loading="memberAdding" @click="addMember(u)">
+              {{ memberIds.has(u.id) ? '已在组内' : memberRole === 'member' ? '发送邀请' : '添加' }}
             </n-button>
           </div>
           <n-empty v-if="memberResults.length === 0" description="没有匹配的用户" style="padding: 16px 0;" />

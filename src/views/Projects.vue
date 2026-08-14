@@ -6,8 +6,9 @@ import {
   NModal, NInput, NForm, NFormItem, NEmpty, NAvatar, NIcon, useMessage, useDialog,
 } from 'naive-ui'
 import { RocketOutline } from '@vicons/ionicons5'
-import { fetchTopics, fetchProjects, createProject, joinProject, updateProject } from '../api/project'
+import { fetchTopics, fetchProjects, createProject, joinProject, joinProjectDirect, updateProject } from '../api/project'
 import { ApiError } from '../api/request'
+import { useAuthStore } from '../stores/auth'
 import type { Project, Topic } from '../api/types'
 
 const AVATAR_COLORS = ['#18a058', '#2080f0', '#d03050', '#f0a020']
@@ -15,10 +16,12 @@ const AVATAR_COLORS = ['#18a058', '#2080f0', '#d03050', '#f0a020']
 const router = useRouter()
 const message = useMessage()
 const dialog = useDialog()
+const auth = useAuthStore()
 
 const topics = ref<Topic[]>([])
 const projects = ref<Project[]>([])
 const loading = ref(false)
+const joiningId = ref<string | null>(null)
 
 const activeTab = ref('mine')
 
@@ -36,6 +39,20 @@ async function load() {
 onMounted(load)
 
 const isFinished = (p: Project) => p.status === 'finished'
+const isMember = (p: Project) => p.members.some((m) => m.id === auth.user?.id)
+
+async function joinNow(p: Project) {
+  joiningId.value = p.id
+  try {
+    const project = await joinProjectDirect(p.id)
+    message.success(`已加入「${project.name}」`)
+    await load()
+  } catch (err) {
+    message.error(err instanceof ApiError ? err.message : '加入失败')
+  } finally {
+    joiningId.value = null
+  }
+}
 
 const createModal = ref(false)
 const createForm = ref({ topicId: '', name: '' })
@@ -120,16 +137,18 @@ async function finishProject(p: Project) {
           </n-empty>
 
           <n-space vertical v-else size="small">
-            <n-card v-for="p in projects" :key="p.id" size="small" hoverable @click="router.push(`/project/${p.id}`)" style="cursor: pointer;">
+            <n-card v-for="p in projects" :key="p.id" size="small" hoverable @click="isMember(p) && router.push(`/project/${p.id}`)" style="cursor: pointer;">
               <n-space align="center" justify="space-between" wrap>
                 <n-space align="center" size="small">
                   <n-text strong>{{ p.name }}</n-text>
                   <n-tag size="small" :type="isFinished(p) ? 'default' : 'success'" :bordered="false">
                     {{ isFinished(p) ? '已结题' : '进行中' }}
                   </n-tag>
+                  <n-tag v-if="p.group" size="small" :bordered="false" type="info">👥 {{ p.group.name }}</n-tag>
+                  <n-tag v-else size="small" :bordered="false" type="default">公共项目</n-tag>
                   <n-tag size="small" :bordered="false" type="primary">邀请码 {{ p.inviteCode }}</n-tag>
                 </n-space>
-                <n-space align="center">
+                <n-space v-if="isMember(p)" align="center">
                   <div class="member-avatars">
                     <n-avatar
                       v-for="(m, i) in p.members"
@@ -146,6 +165,7 @@ async function finishProject(p: Project) {
                   <n-button size="small" type="primary" ghost @click.stop="router.push(`/project/${p.id}`)">进入</n-button>
                   <n-button v-if="!isFinished(p)" size="small" @click.stop="confirmFinish(p)">结题</n-button>
                 </n-space>
+                <n-button v-else size="small" type="primary" :loading="joiningId === p.id" @click.stop="joinNow(p)">加入</n-button>
               </n-space>
             </n-card>
           </n-space>

@@ -1,5 +1,5 @@
 import { del, get, patch, post } from './request'
-import type { GroupMember, QuizGroup, QuizMode, QuizQuestion, UserBrief } from './types'
+import type { GroupInvite, GroupMember, QuizGroup, QuizMode, QuizQuestion, StudentInvite, UserBrief } from './types'
 
 export interface QuestionBody {
   question: string
@@ -10,8 +10,38 @@ export interface QuestionBody {
   explanation: string
 }
 
+export interface MyGroup {
+  id: string
+  name: string
+  quizMode: QuizMode
+}
+
 export function fetchMyGroups() {
-  return get<{ items: Array<{ id: string; name: string }>; total: number }>('/groups/mine')
+  return get<{ items: MyGroup[]; total: number }>('/groups/mine')
+}
+
+export function joinGroupByCode(inviteCode: string) {
+  return post<QuizGroup>('/groups/join', { inviteCode })
+}
+
+export function sendGroupInvite(id: string, userId: string) {
+  return post<GroupInvite>(`/groups/${id}/invites`, { userId })
+}
+
+export function fetchGroupInvites(id: string) {
+  return get<{ items: GroupInvite[]; total: number }>(`/groups/${id}/invites`)
+}
+
+export function withdrawGroupInvite(id: string, inviteId: string) {
+  return del<void>(`/groups/${id}/invites/${inviteId}`)
+}
+
+export function fetchMyInvites() {
+  return get<{ items: StudentInvite[]; total: number }>('/groups/invites')
+}
+
+export function respondInvite(inviteId: string, accept: boolean) {
+  return post<{ status: string }>(`/groups/invites/${inviteId}/respond`, { accept })
 }
 
 export function fetchGroups() {

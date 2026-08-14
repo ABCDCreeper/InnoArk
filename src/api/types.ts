@@ -21,8 +21,9 @@ export interface Topic {
 export interface Project {
   id: string
   topicId: string
+  groupId: string | null
   name: string
-  status: ProjectStatus
+  status: 'active' | 'finished'
   inviteCode: string
   leaderId: string
   description: string
@@ -30,6 +31,7 @@ export interface Project {
   updatedAt: string
   finishedAt: string | null
   topic: { id: string; title: string; subjects: string[] } | null
+  group: { id: string; name: string } | null
   members: User[]
   progress: { done: number; total: number }
 }
@@ -139,10 +141,32 @@ export interface QuizGroup {
   name: string
   description: string
   quizMode: QuizMode
+  inviteCode: string
   memberCount: number
   questionCount: number
+  projectCount: number
   createdAt: string
   updatedAt: string
+}
+
+export interface GroupInvite {
+  id: string
+  groupId: string
+  userId: string
+  inviterId: string
+  status: 'pending' | 'accepted' | 'declined'
+  name: string
+  username: string
+  createdAt: string
+}
+
+export interface StudentInvite {
+  id: string
+  groupId: string
+  status: 'pending' | 'accepted' | 'declined'
+  groupName: string
+  inviterName: string
+  createdAt: string
 }
 
 export interface GroupMember {

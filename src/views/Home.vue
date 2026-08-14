@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  NCard, NGrid, NGridItem, NButton, NProgress, NTag, NSpace, NText, NStatistic, NIcon, NEmpty,
+  NCard, NGrid, NGridItem, NButton, NProgress, NTag, NSpace, NText, NStatistic, NIcon, NEmpty, NInput, NDivider, useMessage,
 } from 'naive-ui'
 import {
   RocketOutline, CompassOutline, TimerOutline, SchoolOutline, ChevronForwardOutline, TrophyOutline, AlbumsOutline,
@@ -10,14 +10,63 @@ import {
 import { useAuthStore } from '../stores/auth'
 import { fetchProjects } from '../api/project'
 import { fetchFocusStats } from '../api/focus'
-import type { FocusStats, Project } from '../api/types'
+import { fetchMyGroups, fetchMyInvites, joinGroupByCode, respondInvite } from '../api/group'
+import { ApiError } from '../api/request'
+import type { FocusStats, Project, StudentInvite } from '../api/types'
+import type { MyGroup } from '../api/group'
 
 const router = useRouter()
+const message = useMessage()
 const auth = useAuthStore()
 
 const projects = ref<Project[]>([])
 const stats = ref<FocusStats | null>(null)
 const loading = ref(true)
+
+const myGroups = ref<MyGroup[]>([])
+const invites = ref<StudentInvite[]>([])
+const inviteCode = ref('')
+const joiningInvite = ref(false)
+const respondingId = ref<string | null>(null)
+
+async function loadGroups() {
+  try {
+    const [g, i] = await Promise.all([fetchMyGroups(), fetchMyInvites()])
+    myGroups.value = g.items
+    invites.value = i.items
+  } catch {
+    /* ignore */
+  }
+}
+
+async function joinGroup() {
+  const code = inviteCode.value.trim()
+  if (!code) return
+  joiningInvite.value = true
+  try {
+    const g = await joinGroupByCode(code)
+    message.success(`已加入「${g.name}」`)
+    inviteCode.value = ''
+    await loadGroups()
+  } catch (err) {
+    message.error(err instanceof ApiError ? err.message : '加入失败')
+  } finally {
+    joiningInvite.value = false
+  }
+}
+
+async function respond(iv: StudentInvite, accept: boolean) {
+  respondingId.value = iv.id
+  try {
+    await respondInvite(iv.id, accept)
+    message.success(accept ? `已加入「${iv.groupName}」` : '已拒绝邀请')
+    await loadGroups()
+  } catch (err) {
+    message.error(err instanceof ApiError ? err.message : '操作失败')
+  } finally {
+    respondingId.value = null
+  }
+}
 
 onMounted(async () => {
   try {
@@ -27,6 +76,7 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+  if (!auth.isTeacher) loadGroups()
 })
 
 const quickLinks = [
@@ -88,6 +138,34 @@ const greeting = () => {
       </n-grid-item>
     </n-grid>
 
+    <n-card v-if="!auth.isTeacher" title="我的分组与邀请">
+      <n-space vertical size="medium">
+        <div class="group-row">
+          <n-text strong style="font-size: 13px; width: 72px;">我的分组</n-text>
+          <n-space v-if="myGroups.length > 0" size="small" wrap>
+            <n-tag v-for="g in myGroups" :key="g.id" size="small" :bordered="false" type="primary">👥 {{ g.name }}</n-tag>
+          </n-space>
+          <n-text v-else depth="3" style="font-size: 13px;">还没有加入分组，输入邀请码加入吧</n-text>
+        </div>
+
+        <div class="group-row">
+          <n-text strong style="font-size: 13px; width: 72px;">加入分组</n-text>
+          <n-input v-model:value="inviteCode" placeholder="输入组邀请码，如 G1-KM3X" style="max-width: 220px;" @keydown.enter="joinGroup" />
+          <n-button type="primary" size="small" :loading="joiningInvite" :disabled="!inviteCode.trim()" @click="joinGroup">加入</n-button>
+        </div>
+
+        <template v-if="invites.length > 0">
+          <n-divider style="margin: 2px 0;" />
+          <n-text strong style="font-size: 13px;">邀请通知</n-text>
+          <div v-for="iv in invites" :key="iv.id" class="group-row">
+            <n-text style="font-size: 13px;">「{{ iv.inviterName }}」邀请你加入「{{ iv.groupName }}」</n-text>
+            <n-button size="small" type="primary" :loading="respondingId === iv.id" @click="respond(iv, true)">通过</n-button>
+            <n-button size="small" :disabled="respondingId === iv.id" @click="respond(iv, false)">拒绝</n-button>
+          </div>
+        </template>
+      </n-space>
+    </n-card>
+
     <n-card title="我的项目" :loading="loading">
       <template #header-extra>
         <n-button text type="primary" @click="router.push('/projects')">全部项目 <n-icon><chevron-forward-outline /></n-icon></n-button>
@@ -120,3 +198,12 @@ const greeting = () => {
     </n-card>
   </n-space>
 </template>
+
+<style scoped>
+.group-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+</style>

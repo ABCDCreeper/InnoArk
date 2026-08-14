@@ -109,6 +109,7 @@
 {
   "id": "p1",
   "topicId": "topic1",
+  "groupId": "g1",
   "name": "火星基地能源方案",
   "status": "active",
   "inviteCode": "P1-7F3A",
@@ -118,12 +119,13 @@
   "updatedAt": "2026-08-11T01:00:00.000Z",
   "finishedAt": null,
   "topic": { "id": "topic1", "title": "…", "subjects": ["物理"] },
+  "group": { "id": "g1", "name": "火星能源课题小组" },
   "members": [ /* User[] */ ],
   "progress": { "done": 3, "total": 6 }
 }
 ```
 
-`status`: `active` 进行中 | `finished` 已结题。`description` 项目简介（≤2000 字，组员与教师可编辑）。`progress` 由后端按任务状态实时计算。
+`status`: `active` 进行中 | `finished` 已结题。`description` 项目简介（≤2000 字，组员与教师可编辑）。`progress` 由后端按任务状态实时计算。`groupId`：所属用户组（`null` 为公共项目），发起项目时自动归入创建者所在组（未分组则为公共）；**组间隔离**：学生仅可访问/加入 自己加入的项目、公共项目、自己所在组的项目。
 
 ### 2.4 MindNode 思维导图节点
 
@@ -248,13 +250,15 @@
 ```json
 {
   "id": "g1", "name": "火星能源课题小组", "description": "…",
-  "quizMode": "fallback", "memberCount": 4, "questionCount": 5,
+  "quizMode": "fallback", "inviteCode": "G1-KM3X",
+  "memberCount": 4, "questionCount": 5, "projectCount": 2,
   "createdAt": "…", "updatedAt": "…"
 }
 ```
 
 - `quizMode` 抽题机制：`group` 只用组内题库 | `fallback` 组内为空回退公共 | `mixed` 组内与公共混合
-- `memberCount` / `questionCount` 为统计字段（仅列表/详情返回）
+- `inviteCode`：学生凭码直接入组（`G` 开头）
+- `memberCount` / `questionCount` / `projectCount` 为统计字段（列表/详情返回）
 
 ### 2.17 GroupMember 用户组成员
 
@@ -263,6 +267,15 @@
 ```
 
 `role`：`teacher`（负责老师，可管理该组）| `member`（组内学生）。一个用户组可有多个负责老师，一个学生可同时属于多个组。
+
+### 2.18 GroupInvite 入组邀请
+
+```json
+{ "id": "gi1", "groupId": "g1", "userId": "u4", "inviterId": "t1", "status": "pending", "createdAt": "…", "respondedAt": null }
+```
+
+- `status`：`pending` 待处理 | `accepted` 已通过 | `declined` 已拒绝
+- 学生端列表附加 `groupName`（组名）与 `inviterName`（邀请老师）；老师端列表附加 `name`/`username`（被邀请人）
 
 ---
 
@@ -323,9 +336,11 @@
 
 响应 `200`：`{ "items": [ /* Topic[] */ ], "total": n, "page": 1, "pageSize": n }`
 
-#### `GET /api/projects` — 当前用户参与的项目
+#### `GET /api/projects` — 我可见的项目
 
-响应 `200`：`{ "items": [ /* Project[] */ ] }`（学生返回参与的；教师返回空数组，教师用 `/api/teacher/projects`）。
+学生返回：我加入的 + 公共项目 + 我所在组的项目（**组间隔离**，跨组项目不可见）；教师返回空数组（教师用 `/api/teacher/projects`）。
+
+响应 `200`：`{ "items": [ /* Project[] */ ] }`。
 
 #### `POST /api/projects` — 发起项目（组队）
 
@@ -335,13 +350,17 @@
 { "topicId": "topic1", "name": "火星基地能源方案" }
 ```
 
-`name` 可省略，默认取课题名。创建后自动：发起人成为组长并加入成员、生成唯一 `inviteCode`、初始化根导图节点。
+`name` 可省略，默认取课题名。创建后自动：发起人成为组长并加入成员、生成唯一 `inviteCode`、初始化根导图节点、**自动归入发起人所在组**（未分组则为公共项目）。
 
 响应 `201`：`Project`。错误：`400 VALIDATION_ERROR`。
 
 #### `GET /api/projects/:id` — 项目详情
 
-响应 `200`：`Project`。错误：`404 PROJECT_NOT_FOUND`、`403`（非成员学生）。
+响应 `200`：`Project`。错误：`404 PROJECT_NOT_FOUND`、`403`（非成员且非同组学生）。
+
+#### `POST /api/projects/:id/join` — 一键加入（仅学生）
+
+同组成员或公共项目可直接加入（无需邀请码）。错误：`403`（跨组或非学生）、`409 ALREADY_MEMBER`、`409 TEAM_FULL`（满 4 人）。响应 `201`：`Project`。
 
 #### `PATCH /api/projects/:id` — 更新项目
 
@@ -366,7 +385,7 @@
 简介由组员或教师填写，≤2000 字。结题时后端记录 `finishedAt`，并生成一条里程碑系统反馈。
 响应 `200`：`Project`。错误：`400`、`403`。
 
-#### `POST /api/projects/join` — 邀请码加入（组队）
+#### `POST /api/projects/join` — 邀请码加入（组队，仅学生）
 
 请求：
 
@@ -378,6 +397,7 @@
 - `409 INVALID_INVITE`（邀请码无效）
 - `409 ALREADY_MEMBER`（已加入）
 - `409 TEAM_FULL`（已满 4 人）
+- `403`（跨组项目：仅本组成员可加入；非学生）
 
 > 说明：邀请码由后端生成并全局唯一（如 `P1-7F3A`），加入时后端解析其对应项目；若希望更纯粹的 REST 风格，可改为 `POST /api/projects/:id/members`（body 携带 `inviteCode` 校验）。
 
@@ -541,9 +561,9 @@
 
 ### 3.8 教师端
 
-#### `GET /api/teacher/projects` — 全部团队总览（仅教师）
+#### `GET /api/teacher/projects?group=<id>` — 团队总览（仅教师）
 
-按最近更新倒序。响应 `200`：`{ "items": [ /* Project[] */ ] }`。错误：`403`。
+默认返回：我负责管理的组的项目 + 公共项目；`?group=<id>` 只看该组的项目（非管理的组返回 `403`）。按最近更新倒序。响应 `200`：`{ "items": [ /* Project[] */ ] }`。错误：`403`。
 
 #### `GET /api/projects/:id/annotations` — 批注列表
 
@@ -608,15 +628,20 @@
 
 ### 3.11 用户组与题库管理
 
-权限模型：**建组/搜索用户** = 任意教师；**管理（改名、删组、成员、出题）** = 组内的负责老师（`role=teacher`）；学生仅可通过 3.10 玩自己所在组的题库。
+权限模型：**建组/搜索用户/邀请码入组** = 相应角色；**管理（改名、删组、成员、出题、邀请）** = 组内的负责老师（`role=teacher`）；学生可通过邀请码直接入组，或收到老师邀请后在首页确认。
 
 #### `GET /api/groups` — 我负责管理的用户组（仅教师）
 
-响应 `200`：`{ "items": [ /* Group[]（含 memberCount/questionCount） */ ] }`。错误：`403`。
+响应 `200`：`{ "items": [ /* Group[]（含 memberCount/questionCount/projectCount/inviteCode） */ ] }`。错误：`403`。
 
-#### `GET /api/groups/mine` — 我所在的用户组（学生）
+#### `GET /api/groups/mine` — 我所在的用户组（学生，多组并列）
 
-响应 `200`：`{ "items": [ { "id": "g1", "name": "火星能源课题小组" } ] }`
+响应 `200`：`{ "items": [ { "id": "g1", "name": "火星能源课题小组", "quizMode": "fallback" } ] }`
+
+#### `POST /api/groups/join` — 邀请码加入分组（仅学生）
+
+请求：`{ "inviteCode": "G1-KM3X" }`（大小写不敏感）。
+响应 `201`：`Group`（直接入组为 `member`）。错误：`403`（非学生）、`409 INVALID_INVITE`、`409 ALREADY_MEMBER`。
 
 #### `POST /api/groups` — 新建用户组（仅教师）
 
@@ -635,9 +660,9 @@
 
 响应 `200`：`{ "items": [ /* GroupMember[] */ ] }`（负责老师在前）。
 
-#### `POST /api/groups/:id/members` — 添加成员（仅负责老师）
+#### `POST /api/groups/:id/members` — 添加负责老师（仅负责老师）
 
-请求：`{ "userId": "u4", "role": "member" }`（`role`：`teacher` 负责老师 | `member` 学生）。
+请求：`{ "userId": "t2", "role": "teacher" }`。**添加学生请改用发送邀请（见下）**。
 响应 `201`：`GroupMember`。错误：`409 ALREADY_MEMBER`、`404`（用户不存在）、`403`、`400`。
 
 #### `DELETE /api/groups/:id/members/:userId` — 移除成员（仅负责老师）
@@ -661,7 +686,28 @@
 
 响应 `204`。
 
-#### `GET /api/users?keyword=` — 搜索用户（仅教师，添加成员用）
+#### `POST /api/groups/:id/invites` — 给学生发送入组邀请（仅负责老师）
+
+请求：`{ "userId": "u4" }`（目标必须是学生）。
+响应 `201`：`GroupInvite`。错误：`409 ALREADY_INVITED`（已有待处理邀请）、`409 ALREADY_MEMBER`、`400`（目标为老师）、`403`、`404`。
+
+#### `GET /api/groups/:id/invites` — 组内待处理邀请（仅负责老师）
+
+响应 `200`：`{ "items": [ /* GroupInvite[]（含被邀请人 name/username） */ ] }`。
+
+#### `DELETE /api/groups/:id/invites/:inviteId` — 撤回邀请（仅负责老师）
+
+仅可撤回 `pending` 状态的邀请。响应 `204`。错误：`404`、`403`。
+
+#### `GET /api/groups/invites` — 我的待处理邀请（学生）
+
+响应 `200`：`{ "items": [ { "id", "groupId", "groupName", "inviterName", "createdAt" } ] }`
+
+#### `POST /api/groups/invites/:inviteId/respond` — 通过/拒绝邀请（学生）
+
+请求：`{ "accept": true }`。通过后自动入组（`member`）。响应 `200`：`{ "status": "accepted" | "declined" }`。错误：`404`（非本人或已处理）、`400`。
+
+#### `GET /api/users?keyword=` — 搜索用户（仅教师，添加成员/发邀请用）
 
 按用户名/姓名模糊匹配（大小写不敏感），最多 20 条。响应 `200`：`{ "items": [ { "id", "username", "name", "role" } ] }`。错误：`403`。
 

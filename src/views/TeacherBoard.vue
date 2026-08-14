@@ -3,23 +3,38 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NCard, NGrid, NGridItem, NButton, NTag, NSpace, NText, NProgress, NEmpty, NAvatarGroup, NIcon,
+  NRadioGroup, NRadioButton,
 } from 'naive-ui'
 import { ChevronForwardOutline } from '@vicons/ionicons5'
 import { fetchTeacherProjects } from '../api/teacher'
+import { fetchGroups } from '../api/group'
 import type { Project } from '../api/types'
+import type { QuizGroup } from '../api/types'
 
 const router = useRouter()
 const projects = ref<Project[]>([])
+const groups = ref<QuizGroup[]>([])
+const filter = ref('')
 const loading = ref(true)
 
-onMounted(async () => {
+async function load() {
+  loading.value = true
   try {
-    const res = await fetchTeacherProjects()
+    const g = await fetchGroups()
+    groups.value = g.items
+    const res = await fetchTeacherProjects(filter.value || undefined)
     projects.value = res.items
   } finally {
     loading.value = false
   }
-})
+}
+
+function changeFilter(v: string) {
+  filter.value = v
+  load()
+}
+
+onMounted(load)
 
 function formatTime(iso: string) {
   const d = new Date(iso)
@@ -43,6 +58,10 @@ const activeCount = () => projects.value.filter((p) => p.status === 'active').le
           <n-tag size="large" :bordered="false" type="default">已结题 {{ projects.length - activeCount() }}</n-tag>
         </n-space>
       </n-space>
+      <n-radio-group :value="filter" style="margin-top: 12px;" @update:value="changeFilter">
+        <n-radio-button value="">全部</n-radio-button>
+        <n-radio-button v-for="g in groups" :key="g.id" :value="g.id">👥 {{ g.name }}</n-radio-button>
+      </n-radio-group>
     </n-card>
 
     <n-empty v-if="!loading && projects.length === 0" description="暂无项目" />
@@ -58,6 +77,10 @@ const activeCount = () => projects.value.filter((p) => p.status === 'active').le
               </n-tag>
             </n-space>
             <n-text depth="3" style="font-size: 12px;">{{ p.topic?.title }}</n-text>
+            <n-space align="center" size="small">
+              <n-tag v-if="p.group" size="small" :bordered="false" type="info">👥 {{ p.group.name }}</n-tag>
+              <n-tag v-else size="small" :bordered="false" type="default">公共项目</n-tag>
+            </n-space>
             <n-progress type="line" :percentage="p.progress.total === 0 ? 0 : Math.round((p.progress.done / p.progress.total) * 100)" :height="10" />
             <n-space align="center" justify="space-between">
               <n-avatar-group :options="p.members.map((m) => ({ name: m.name, src: '' }))" :size="24" />
