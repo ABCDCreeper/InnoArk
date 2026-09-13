@@ -1,4 +1,4 @@
-import type { DB, Feedback, Member, Project, Task, TaskStatus, User } from './db.ts'
+import type { DB, Feedback, Member, Project, Task, TaskStatus, User, Course } from './db.ts'
 import { createToken, genId, now, parseToken, pick } from './db.ts'
 
 export interface Ctx {
@@ -7,6 +7,18 @@ export interface Ctx {
   params: Record<string, string>
   query: URLSearchParams
   body: Record<string, any>
+}
+
+// 学习系统类型
+interface CourseView {
+  id: number; title: string; description: string; cover: string
+  category: string; video_url: string; xp_reward: number; lesson_count: number
+}
+
+
+function courseView(db: DB, course: Course): CourseView {
+  const count = db.lessons.filter((l) => l.course_id === course.id).length
+  return { ...course, lesson_count: count }
 }
 
 export class HttpError extends Error {
@@ -627,6 +639,99 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
           annotations: ctx.db.annotations.filter((a) => a.projectId === project.id),
         },
       }
+    },
+  },
+  // ---- 学习系统（全部标记 public，不校验 mock token 格式） ----
+  {
+    method: 'GET',
+    pattern: /^\/api\/learn\/courses$/,
+    public: true,
+    handler: (ctx) => {
+      let items = ctx.db.courses.map((c) => courseView(ctx.db, c))
+      const cat = ctx.query.get('category')
+      if (cat) items = items.filter((c) => c.category === cat)
+      return { status: 200, body: items }
+    },
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/learn\/courses\/(\d+)$/,
+    public: true,
+    handler: (ctx) => {
+      const cid = Number(ctx.params[0])
+      const course = ctx.db.courses.find((c) => c.id === cid)
+      if (!course) throw notFound('课程不存在')
+      const lessonList = ctx.db.lessons
+        .filter((l) => l.course_id === cid)
+        .sort((a, b) => a.order_num - b.order_num)
+        .map((l) => ({ id: l.id, title: l.title, video_url: l.video_url, duration: l.duration, order: l.order_num }))
+      return { status: 200, body: { ...courseView(ctx.db, course), lessons: lessonList } }
+    },
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/learn\/lessons\/(\d+)\/quizzes$/,
+    public: true,
+    handler: (ctx) => {
+      const lid = Number(ctx.params[0])
+      const items = ctx.db.quizzes
+        .filter((q) => q.lesson_id === lid)
+        .sort((a, b) => a.order_num - b.order_num)
+        .map((q) => ({ id: q.id, question: q.question, options: q.options, correct: q.correct, order: q.order_num }))
+      return { status: 200, body: items }
+    },
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/learn\/lesson\/(\d+)\/complete$/,
+    public: true,
+    handler: (ctx) => {
+      const lid = Number(ctx.params[0])
+      const uid = ctx.body?.user_id || ctx.user.id
+      if (!ctx.db.userProgress[uid]) ctx.db.userProgress[uid] = { xp: 0, streak: 0, completedLessons: [] }
+      const prog = ctx.db.userProgress[uid]
+      if (!prog.completedLessons.includes(lid)) {
+        prog.completedLessons.push(lid)
+        prog.xp += 10
+        prog.streak += 1
+      }
+      const achievements: string[] = []
+      const nowSec = String(Date.now() / 1000)
+      if (prog.xp >= 50 && !ctx.db.achievements.some((a) => a.userId === uid && a.name === '初学者')) {
+        ctx.db.achievements.push({ userId: uid, name: '初学者', unlockedAt: nowSec })
+        achievements.push('初学者')
+      }
+      if (prog.xp >= 100 && !ctx.db.achievements.some((a) => a.userId === uid && a.name === '知识达人')) {
+        ctx.db.achievements.push({ userId: uid, name: '知识达人', unlockedAt: nowSec })
+        achievements.push('知识达人')
+      }
+      if (prog.streak >= 5 && !ctx.db.achievements.some((a) => a.userId === uid && a.name === '连续学习')) {
+        ctx.db.achievements.push({ userId: uid, name: '连续学习', unlockedAt: nowSec })
+        achievements.push('连续学习')
+      }
+      return { status: 200, body: { xp: prog.xp, xp_gained: 10, achievements } }
+    },
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/learn\/progress$/,
+    public: true,
+    handler: (ctx) => {
+      const uid = ctx.query.get('user_id') || ctx.user.id
+      const prog = ctx.db.userProgress[uid]
+      const total = new Set(ctx.db.courses.map((c) => c.id)).size
+      if (!prog) return { status: 200, body: { xp: 0, points: 0, streak: 0, total_courses: total } }
+      return { status: 200, body: { xp: prog.xp, points: prog.xp, streak: prog.streak, total_courses: total } }
+    },
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/learn\/achievements$/,
+    public: true,
+    handler: (ctx) => {
+      const uid = ctx.query.get('user_id') || ctx.user.id
+      const items = ctx.db.achievements.filter((a) => a.userId === uid).map((a) => ({ name: a.name, unlocked_at: a.unlockedAt }))
+      return { status: 200, body: items }
     },
   },
 ]

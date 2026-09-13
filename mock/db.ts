@@ -39,6 +39,33 @@ export interface Resource { id: string; title: string; category: string; descrip
 export interface Annotation { id: string; projectId: string; userId: string; content: string; createdAt: string }
 export interface FocusSession { id: string; userId: string; durationMin: number; type: 'focus' | 'break'; createdAt: string }
 
+// 学习系统
+export interface Course {
+  id: number
+  title: string
+  description: string
+  cover: string
+  category: string
+  video_url: string
+  xp_reward: number
+}
+export interface Lesson {
+  id: number
+  course_id: number
+  title: string
+  video_url: string
+  duration: number
+  order_num: number
+}
+export interface Quiz {
+  id: number
+  lesson_id: number
+  question: string
+  options: string[]
+  correct: number
+  order_num: number
+}
+
 export interface DB {
   users: User[]
   topics: Topic[]
@@ -53,6 +80,11 @@ export interface DB {
   resources: Resource[]
   annotations: Annotation[]
   focusSessions: FocusSession[]
+  courses: Course[]
+  lessons: Lesson[]
+  quizzes: Quiz[]
+  userProgress: Record<string, { xp: number; streak: number; completedLessons: number[] }>
+  achievements: Array<{ userId: string; name: string; unlockedAt: string }>
 }
 
 const DATA_DIR = join(process.cwd(), '.mock-data')
@@ -203,7 +235,55 @@ function seed(): DB {
   for (const uid of ['u2', 'u3']) {
     focusSessions.push({ id: genId('fs'), userId: uid, durationMin: 25, type: 'focus', createdAt: daysAgo(randInt(1, 5), randInt(9, 20), randInt(0, 59)) })
   }
-  return { users, topics, projects, members, mindNodes, notes, tasks, taskLogs, checkins, feedbacks, resources, annotations, focusSessions }
+  const courses: Course[] = [
+    { id: 1, title: '二次函数探秘', description: '从基础到进阶，掌握二次函数的图像与性质', cover: '📐', category: '数学', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', xp_reward: 20 },
+    { id: 2, title: '英语单词大冒险', description: '每日一词，轻松记忆3000核心词汇', cover: '📖', category: '英语', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', xp_reward: 15 },
+    { id: 3, title: '物理小实验', description: '动手做实验，理解力学原理', cover: '⚗️', category: '科学', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', xp_reward: 25 },
+    { id: 4, title: 'Scratch编程入门', description: '用积木搭建你的第一个游戏', cover: '💻', category: '编程', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', xp_reward: 30 },
+    { id: 5, title: '历史故事会', description: '穿越时空，聆听历史的声音', cover: '🏛️', category: '历史', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', xp_reward: 10 },
+    { id: 6, title: '概率与统计入门', description: '学会用数据说话，预测未来的可能性', cover: '🎲', category: '数学', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', xp_reward: 20 },
+    { id: 7, title: '化学元素乐园', description: '探索元素周期表的奥秘，认识身边的化学', cover: '🧪', category: '科学', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', xp_reward: 25 },
+    { id: 8, title: 'Python 编程入门', description: '从零开始，写出你的第一行 Python 代码', cover: '🐍', category: '编程', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', xp_reward: 35 },
+    { id: 9, title: '世界地理探索', description: '足不出户，走遍七大洲四大洋', cover: '🌍', category: '地理', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', xp_reward: 15 },
+  ]
+  const lessons: Lesson[] = [
+    { id: 1, course_id: 1, title: '什么是二次函数', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 180, order_num: 1 },
+    { id: 2, course_id: 1, title: '二次函数的图像', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 240, order_num: 2 },
+    { id: 3, course_id: 2, title: '每日一词：Hello', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 120, order_num: 1 },
+    { id: 4, course_id: 2, title: '每日一句：自我介绍', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 150, order_num: 2 },
+    { id: 5, course_id: 3, title: '重力实验', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 200, order_num: 1 },
+    { id: 6, course_id: 3, title: '摩擦力实验', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 180, order_num: 2 },
+    { id: 7, course_id: 4, title: '第一个Scratch项目', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 300, order_num: 1 },
+    { id: 8, course_id: 4, title: '动画与交互', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 360, order_num: 2 },
+    { id: 9, course_id: 5, title: '远古文明', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 240, order_num: 1 },
+    { id: 10, course_id: 5, title: '丝绸之路', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 300, order_num: 2 },
+    { id: 11, course_id: 6, title: '概率基础', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 200, order_num: 1 },
+    { id: 12, course_id: 6, title: '数据图表与统计', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 220, order_num: 2 },
+    { id: 13, course_id: 7, title: '元素周期表探秘', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 260, order_num: 1 },
+    { id: 14, course_id: 7, title: '有趣的化学反应', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 280, order_num: 2 },
+    { id: 15, course_id: 8, title: '第一个Python程序', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 240, order_num: 1 },
+    { id: 16, course_id: 8, title: '变量与循环', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 300, order_num: 2 },
+    { id: 17, course_id: 9, title: '认识七大洲', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 200, order_num: 1 },
+    { id: 18, course_id: 9, title: '世界之最', video_url: 'https://www.w3schools.com/html/mov_bbb.mp4', duration: 180, order_num: 2 },
+  ]
+  const quizzes: Quiz[] = [
+    { id: 1, lesson_id: 1, question: '二次函数的标准形式是什么？', options: ['y=ax²+bx+c', 'y=ax+b', 'y=a/x', 'y=a^x'], correct: 0, order_num: 1 },
+    { id: 2, lesson_id: 1, question: '二次函数的图像是什么形状？', options: ['直线', '抛物线', '双曲线', '圆形'], correct: 1, order_num: 2 },
+    { id: 3, lesson_id: 3, question: '"Hello" 的中文意思是什么？', options: ['再见', '你好', '谢谢', '对不起'], correct: 1, order_num: 1 },
+    { id: 4, lesson_id: 5, question: '地球上的物体下落是因为什么？', options: ['磁力', '重力', '弹力', '浮力'], correct: 1, order_num: 1 },
+    { id: 5, lesson_id: 6, question: '摩擦力方向与物体运动方向的关系是？', options: ['相同', '相反', '垂直', '无关'], correct: 1, order_num: 1 },
+    { id: 6, lesson_id: 7, question: 'Scratch中哪个积木能让角色移动？', options: ['等待', '移动', '播放声音', '显示'], correct: 1, order_num: 1 },
+    { id: 7, lesson_id: 9, question: '世界上最早的文明之一发源于哪条河流？', options: ['亚马孙河', '尼罗河', '密西西比河', '多瑙河'], correct: 1, order_num: 1 },
+    { id: 8, lesson_id: 11, question: '掷一枚均匀硬币，正面朝上的概率是？', options: ['0', '0.25', '0.5', '1'], correct: 2, order_num: 1 },
+    { id: 9, lesson_id: 12, question: '哪种图表最适合展示数据的变化趋势？', options: ['饼图', '折线图', '柱状图', '散点图'], correct: 1, order_num: 1 },
+    { id: 10, lesson_id: 13, question: '水的化学式是什么？', options: ['CO₂', 'H₂O', 'NaCl', 'O₂'], correct: 1, order_num: 1 },
+    { id: 11, lesson_id: 14, question: '铁生锈属于什么变化？', options: ['物理变化', '化学变化', '状态变化', '形状变化'], correct: 1, order_num: 1 },
+    { id: 12, lesson_id: 15, question: 'Python中哪个函数用于输出文字？', options: ['input()', 'print()', 'len()', 'type()'], correct: 1, order_num: 1 },
+    { id: 13, lesson_id: 16, question: 'Python中 `for i in range(3):` 会循环几次？', options: ['2次', '3次', '4次', '无限'], correct: 1, order_num: 1 },
+    { id: 14, lesson_id: 17, question: '世界上面积最大的洲是？', options: ['非洲', '北美洲', '亚洲', '南极洲'], correct: 2, order_num: 1 },
+    { id: 15, lesson_id: 18, question: '世界上最长的河流是？', options: ['长江', '亚马孙河', '尼罗河', '密西西比河'], correct: 2, order_num: 1 },
+  ]
+  return { users, topics, projects, members, mindNodes, notes, tasks, taskLogs, checkins, feedbacks, resources, annotations, focusSessions, courses, lessons, quizzes, userProgress: {}, achievements: [] }
 }
 
 export function loadDB(): DB {

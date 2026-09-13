@@ -28,7 +28,8 @@ export default function mockPlugin(): Plugin {
     configureServer(server) {
       const db = loadDB()
       server.middlewares.use(async (req: IncomingMessage, res: ServerResponse, next) => {
-        if (!req.url || !req.url.startsWith('/api')) return next()
+        // 只拦截 /api/learn 路径，其余 /api/* 放行给 Vite proxy → 真实后端
+        if (!req.url || !req.url.startsWith('/api/learn')) return next()
         const url = new URL(req.url, 'http://localhost')
         try {
           const body = await readBody(req)

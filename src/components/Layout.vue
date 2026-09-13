@@ -12,6 +12,7 @@ import {
   CompassOutline as CompassIcon,
   TimerOutline as TimerIcon,
   SchoolOutline as SchoolIcon,
+  SchoolOutline as LearnIcon,
   SettingsOutline as SettingsIcon,
   InformationCircleOutline as AboutIcon,
   PersonCircleOutline as PersonIcon,
@@ -38,6 +39,7 @@ interface MenuDef { key: string; title: string; icon: Component }
 
 const studentMenu: MenuDef[] = [
   { key: '/', title: '首页', icon: HomeIcon },
+  { key: '/learn', title: '学习', icon: LearnIcon },
   { key: '/projects', title: '项目', icon: RocketIcon },
   { key: '/resources', title: '资源库', icon: CompassIcon },
   { key: '/quiz', title: '闯关', icon: TrophyIcon },
@@ -49,6 +51,7 @@ const studentMenu: MenuDef[] = [
 
 const teacherMenu: MenuDef[] = [
   { key: '/', title: '首页', icon: HomeIcon },
+  { key: '/learn', title: '学习', icon: LearnIcon },
   { key: '/teacher', title: '团队总览', icon: SchoolIcon },
   { key: '/groups', title: '题库管理', icon: AlbumsIcon },
   { key: '/projects', title: '项目', icon: RocketIcon },
@@ -58,6 +61,7 @@ const teacherMenu: MenuDef[] = [
 
 const managerMenu: MenuDef[] = [
   { key: '/', title: '首页', icon: HomeIcon },
+  { key: '/learn', title: '学习', icon: LearnIcon },
   { key: '/admin/users', title: '用户管理', icon: PeopleIcon },
   { key: '/groups', title: '题库管理', icon: AlbumsIcon },
   { key: '/teacher', title: '团队总览', icon: SchoolIcon },
@@ -77,6 +81,7 @@ const fullOptions = computed(() => {
 
 const menuKey = computed(() => {
   if (route.path.startsWith('/project/')) return '/projects'
+  if (route.path.startsWith('/learn/')) return '/learn'
   return route.path
 })
 
