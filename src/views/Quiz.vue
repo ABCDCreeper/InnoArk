@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { NCard, NButton, NSpace, NText, NProgress, NTag, NStatistic, NIcon, NEmpty, NDivider, useMessage } from 'naive-ui'
+import { NCard, NButton, NSpace, NText, NProgress, NTag, NStatistic, NIcon, NEmpty, NDivider, NDrawer, NDrawerContent, useMessage } from 'naive-ui'
 import { PlayOutline, RefreshOutline } from '@vicons/ionicons5'
 import { fetchQuizQuestions, fetchQuizStats, submitQuizAttempt } from '../api/quiz'
 import { fetchMyGroups } from '../api/group'
 import { ApiError } from '../api/request'
 import { useGrowthStore } from '../stores/growth'
+import type { WrongItem } from '../stores/growth'
 import type { CollectionCard } from '../data/collection'
 import type { QuizQuestion, QuizStats } from '../api/types'
 
@@ -31,6 +32,10 @@ const oldBest = ref(-1)
 const isNewRecord = ref(false)
 const starting = ref(false)
 const quizDrop = ref<CollectionCard | null>(null)
+const wrongOpen = ref(false)
+const wrongPicks = ref<Record<string, number>>({})
+const wrongRevealed = ref<Set<string>>(new Set())
+const dailyPicked = ref<number | null>(null)
 
 const PRAISES = [
   '答对啦！你就是行走的百科全书！',
@@ -51,6 +56,7 @@ const FLOAT_EMOJIS = ['🎉', '⭐', '🚀', '💡', '✨', '🔥']
 const CATEGORY_EMOJI: Record<string, string> = { 物理: '⚡', 工程: '🔧', 编程: '💻', 生物: '🧬', 综合: '🧠' }
 
 onMounted(async () => {
+  growth.initDailyQuestion(() => fetchQuizQuestions(20))
   try {
     const [s, g] = await Promise.all([fetchQuizStats(), fetchMyGroups()])
     stats.value = s
@@ -126,6 +132,12 @@ function pick(i: number) {
   } else {
     streak.value = 0
     missed.value.push({ q: current.value, pick: i })
+    growth.recordWrong({
+      question: current.value.question,
+      options: current.value.options,
+      answer: current.value.answer,
+      explanation: current.value.explanation,
+    })
   }
 }
 
@@ -154,6 +166,50 @@ async function finish() {
 }
 
 const LETTERS = ['A', 'B', 'C', 'D']
+
+const dailyShowFb = computed(() => dailyPicked.value !== null || growth.dailyResult !== null)
+const dailyCorrect = computed(() => {
+  const q = growth.dailyQuestion
+  if (!q) return false
+  if (growth.dailyResult !== null) return growth.dailyResult
+  return dailyPicked.value === q.answer
+})
+
+function dailyOptClass(i: number) {
+  const q = growth.dailyQuestion
+  if (!q || !dailyShowFb.value) return ''
+  if (i === q.answer) return 'right'
+  if (dailyPicked.value === i) return 'wrong'
+  return 'dim'
+}
+
+function pickDaily(i: number) {
+  const q = growth.dailyQuestion
+  if (!q || dailyShowFb.value) return
+  dailyPicked.value = i
+  const res = growth.answerDaily(i === q.answer)
+  if (!res) return
+  if (res.xpGained > 0) message.success(`每日一题答对，+${res.xpGained} XP`)
+  else message.info('答错啦，明天再来涨知识！')
+  if (res.leveledUp) message.success('升级啦！')
+}
+
+function wrongState(w: WrongItem, i: number) {
+  if (!wrongRevealed.value.has(w.question)) return ''
+  if (i === w.answer) return 'right'
+  if (wrongPicks.value[w.question] === i) return 'wrong'
+  return 'dim'
+}
+
+function retryWrong(w: WrongItem, i: number) {
+  if (wrongRevealed.value.has(w.question)) return
+  wrongPicks.value = { ...wrongPicks.value, [w.question]: i }
+  wrongRevealed.value = new Set([...wrongRevealed.value, w.question])
+  if (i === w.answer) {
+    growth.removeWrong(w.question)
+    message.success('答对啦，已从错题本移除 🎉')
+  }
+}
 </script>
 
 <template>
@@ -198,12 +254,42 @@ const LETTERS = ['A', 'B', 'C', 'D']
           </n-tag>
         </div>
 
+        <div class="start-actions" style="margin-bottom: 12px;">
+          <n-button quaternary size="small" @click="wrongOpen = true">
+            📝 错题本（{{ growth.wrongBook.length }}）
+          </n-button>
+        </div>
+
         <div class="start-actions">
           <n-button type="primary" size="large" :loading="starting" @click="start">
             <template #icon><n-icon><play-outline /></n-icon></template>
             开始挑战（{{ bankLabel }}）
           </n-button>
         </div>
+      </n-card>
+
+      <n-card size="small">
+        <div class="daily-head">
+          <span class="daily-title">🌟 每日一题</span>
+          <n-text depth="3" style="font-size: 12px;">答对 +5 XP，连续答对有加成</n-text>
+        </div>
+        <template v-if="growth.dailyQuestion">
+          <div class="daily-q">{{ growth.dailyQuestion.question }}</div>
+          <div class="daily-options">
+            <span
+              v-for="(opt, i) in growth.dailyQuestion.options"
+              :key="i"
+              class="daily-opt"
+              :class="dailyOptClass(i)"
+              @click="pickDaily(i)"
+            >{{ LETTERS[i] }}. {{ opt }}</span>
+          </div>
+          <div v-if="dailyShowFb" class="daily-fb" :class="dailyCorrect ? 'ok' : 'no'">
+            <div class="fb-title">{{ dailyCorrect ? '🎉 答对啦！明天再来' : '💡 正确答案：' + growth.dailyQuestion.options[growth.dailyQuestion.answer] }}</div>
+            <div class="fb-expl">{{ growth.dailyQuestion.explanation }}</div>
+          </div>
+        </template>
+        <n-text v-else depth="3" style="font-size: 13px;">题目加载中…</n-text>
       </n-card>
     </n-space>
 
@@ -297,6 +383,33 @@ const LETTERS = ['A', 'B', 'C', 'D']
         <div class="missed-expl">{{ m.q.explanation }}</div>
       </n-card>
     </n-card>
+
+    <n-drawer v-model:show="wrongOpen" :width="440">
+      <n-drawer-content title="📝 错题本" closable>
+        <n-empty v-if="growth.wrongBook.length === 0" description="没有错题，太强了 🎉" style="padding: 40px 0;" />
+        <template v-else>
+          <n-text depth="3" style="font-size: 12px;">点击选项重答，答对自动移出错题本。</n-text>
+          <n-card v-for="w in growth.wrongBook" :key="w.question" size="small" :bordered="false" class="wrong-card">
+            <div class="wrong-q">{{ w.question }}</div>
+            <div class="wrong-options">
+              <span
+                v-for="(opt, i) in w.options"
+                :key="i"
+                class="wrong-opt"
+                :class="wrongState(w, i)"
+                @click="retryWrong(w, i)"
+              >{{ LETTERS[i] }}. {{ opt }}</span>
+            </div>
+            <div v-if="wrongRevealed.has(w.question)" class="wrong-expl">
+              ✅ 正确答案：{{ w.options[w.answer] }} — {{ w.explanation }}
+            </div>
+          </n-card>
+          <n-button quaternary type="error" size="small" style="margin-top: 8px;" @click="growth.clearWrong()">
+            清空错题本
+          </n-button>
+        </template>
+      </n-drawer-content>
+    </n-drawer>
   </div>
 </template>
 
@@ -399,6 +512,119 @@ const LETTERS = ['A', 'B', 'C', 'D']
 
 .drop-emoji {
   font-size: 22px;
+}
+
+.daily-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.daily-title {
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.daily-q {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.daily-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.daily-opt {
+  padding: 9px 12px;
+  border: 1.5px solid rgba(128, 128, 128, 0.28);
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.daily-opt:hover:not(.right):not(.wrong):not(.dim) {
+  border-color: #18a058;
+}
+
+.daily-opt.right {
+  border-color: #18a058;
+  background: rgba(24, 160, 88, 0.1);
+}
+
+.daily-opt.wrong {
+  border-color: #d03050;
+  background: rgba(208, 48, 80, 0.1);
+}
+
+.daily-opt.dim {
+  opacity: 0.45;
+}
+
+.daily-fb {
+  margin-top: 12px;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.daily-fb.ok {
+  background: rgba(24, 160, 88, 0.1);
+  border: 1px solid rgba(24, 160, 88, 0.35);
+}
+
+.daily-fb.no {
+  background: rgba(208, 48, 80, 0.08);
+  border: 1px solid rgba(208, 48, 80, 0.3);
+}
+
+.wrong-card {
+  margin-top: 10px;
+}
+
+.wrong-q {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.wrong-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wrong-opt {
+  padding: 7px 10px;
+  border: 1.5px solid rgba(128, 128, 128, 0.28);
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.wrong-opt.right {
+  border-color: #18a058;
+  background: rgba(24, 160, 88, 0.1);
+}
+
+.wrong-opt.wrong {
+  border-color: #d03050;
+  background: rgba(208, 48, 80, 0.1);
+}
+
+.wrong-opt.dim {
+  opacity: 0.45;
+}
+
+.wrong-expl {
+  margin-top: 8px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  opacity: 0.85;
 }
 
 .quiz-header {

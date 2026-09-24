@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useAuthStore } from './auth'
 import { useLearnStore } from './learn'
 import { fetchFocusStats } from '../api/focus'
+import { COURSES } from '../data/courses'
 import { CARDS, cardsOfSet, pickOne } from '../data/collection'
 import type { CollectionCard } from '../data/collection'
 
@@ -203,5 +204,66 @@ export const useGrowthStore = defineStore('growth', () => {
     return cardsOfSet(setId).filter((c) => save.value.collection.includes(c.id)).length
   }
 
-  return { signedToday, signDays, signStreak, monthSigns, tasks, wrongBook, collection, signIn, refreshTasks, markQuizPlayed, grantLessonDrop, grantQuizDrop, setComplete, setOwnedCount }
+  function recordWrong(item: { question: string; options: string[]; answer: number; explanation: string }) {
+    load()
+    if (save.value.wrongBook.some((w) => w.question === item.question)) return
+    save.value.wrongBook.unshift({ ...item, date: dateKey() })
+    if (save.value.wrongBook.length > 50) save.value.wrongBook.length = 50
+    persist()
+  }
+
+  function removeWrong(question: string) {
+    load()
+    save.value.wrongBook = save.value.wrongBook.filter((w) => w.question !== question)
+    persist()
+  }
+
+  function clearWrong() {
+    load()
+    save.value.wrongBook = []
+    persist()
+  }
+
+  const dailyQuestion = ref<{ question: string; options: string[]; answer: number; explanation: string } | null>(null)
+  const dailyResult = computed(() => {
+    load()
+    return save.value.daily[dateKey()] ?? null
+  })
+
+  function initDailyQuestion(fetcher: () => Promise<{ items: Array<{ question: string; options: string[]; answer: number; explanation: string }> }>) {
+    const today = dateKey()
+    const hash = [...today].reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) % 9973, 7)
+    fetcher()
+      .then((res) => {
+        if (res.items.length === 0) return
+        const q = res.items[hash % res.items.length]
+        dailyQuestion.value = { question: q.question, options: q.options, answer: q.answer, explanation: q.explanation }
+      })
+      .catch(() => {
+        const pool = COURSES.flatMap((c) => c.lessons.flatMap((l) => l.questions))
+        const q = pool[hash % pool.length]
+        dailyQuestion.value = { ...q }
+      })
+  }
+
+  function answerDaily(correct: boolean) {
+    load()
+    const today = dateKey()
+    if (save.value.daily[today] !== undefined) return null
+    save.value.daily[today] = correct
+    if (!correct) {
+      save.value.dailyStreak = 0
+      save.value.dailyLastDate = today
+      persist()
+      return { xpGained: 0, leveledUp: false }
+    }
+    save.value.dailyStreak = save.value.dailyLastDate === dateKey(1) ? save.value.dailyStreak + 1 : 1
+    save.value.dailyLastDate = today
+    const xpGained = 5 + 2 * Math.min(Math.max(save.value.dailyStreak - 1, 0), 5)
+    const res = learn.addXp(xpGained)
+    persist()
+    return { xpGained, ...res }
+  }
+
+  return { signedToday, signDays, signStreak, monthSigns, tasks, wrongBook, collection, signIn, refreshTasks, markQuizPlayed, grantLessonDrop, grantQuizDrop, setComplete, setOwnedCount, recordWrong, removeWrong, clearWrong, dailyQuestion, dailyResult, initDailyQuestion, answerDaily }
 })
