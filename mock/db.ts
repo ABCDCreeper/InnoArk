@@ -66,6 +66,8 @@ export interface QuizQuestionRec {
   explanation: string
 }
 
+export interface QuizAttemptRec { id: string; userId: string; score: number; total: number; createdAt: string }
+
 export interface DB {
   version: number
   users: User[]
@@ -73,6 +75,7 @@ export interface DB {
   groupMembers: GroupMemberRec[]
   groupInvites: GroupInviteRec[]
   quizQuestions: QuizQuestionRec[]
+  quizAttempts: QuizAttemptRec[]
   topics: Topic[]
   projects: Project[]
   members: Member[]
@@ -242,7 +245,29 @@ function seed(): DB {
   const groupInvites: GroupInviteRec[] = [
     { id: 'gi1', groupId: 'g1', userId: 'u4', inviterId: 't1', status: 'pending', createdAt: daysAgo(1, 9) },
   ]
-  const quizQuestions: QuizQuestionRec[] = []
+  const quizQuestions: QuizQuestionRec[] = [
+    { id: 'q1', groupId: null, createdBy: null, createdAt: daysAgo(60), updatedAt: daysAgo(60), category: '物理', difficulty: 1, question: '微波炉是怎么加热食物的？', options: ['让水分子快速振动摩擦生热', '红外线烤热表面', '电流直接流过食物', '压缩空气升温'], answer: 0, explanation: '微波使食物中的水分子随电磁场高速振动，分子互相摩擦产生热量，所以含水量高的部分先热。' },
+    { id: 'q2', groupId: null, createdBy: null, createdAt: daysAgo(60), updatedAt: daysAgo(60), category: '物理', difficulty: 2, question: '宇航员在空间站里会“漂浮”，是因为那里没有引力吗？', options: ['是的，空间站远离地球引力', '不是，是因为他们在持续“下落”', '不是，因为有反重力装置', '是的，真空没有重力'], answer: 1, explanation: '近地轨道引力仍有地表的约 90%。空间站与宇航员一起绕地球做自由落体运动，彼此之间没有支持力，所以看起来像漂浮。' },
+    { id: 'q3', groupId: null, createdBy: null, createdAt: daysAgo(60), updatedAt: daysAgo(60), category: '物理', difficulty: 3, question: '彩虹为什么总是呈圆弧形？', options: ['云层是弧形的', '光在水滴内折射反射后以约 42° 出射', '人眼只能看到圆弧', '大气层是球形的'], answer: 1, explanation: '阳光在水滴内经折射-反射-折射后，以相对入射方向约 42° 的角度射出，所有满足该角度的水滴连起来就是圆弧。' },
+    { id: 'q4', groupId: null, createdBy: null, createdAt: daysAgo(60), updatedAt: daysAgo(60), category: '生物', difficulty: 1, question: '大脑只占体重的约 2%，却消耗了全身多少能量？', options: ['约 2%', '约 10%', '约 20%', '约 50%'], answer: 2, explanation: '大脑耗能约占全身的 20%，是名副其实的“耗电大户”，所以长时间动脑后容易饿。' },
+    { id: 'q5', groupId: null, createdBy: null, createdAt: daysAgo(60), updatedAt: daysAgo(60), category: '生物', difficulty: 2, question: '一棵大树绝大部分的“质量”是从哪里来的？', options: ['土壤', '空气', '水', '阳光'], answer: 1, explanation: '光合作用把空气中的二氧化碳变成糖类等有机物，树木干重里的碳主要来自空气，而不是土壤。' },
+    { id: 'q6', groupId: null, createdBy: null, createdAt: daysAgo(60), updatedAt: daysAgo(60), category: '生物', difficulty: 3, question: '被蚊子叮了为什么会痒？', options: ['蚊子注入了毒素', '人体对蚊子唾液的免疫反应', '皮肤被针尖划伤', '蚊子携带的电流'], answer: 1, explanation: '蚊子吸血时注入抗凝唾液，免疫系统释放组胺来对抗它，组胺刺激神经末梢就产生了痒感和肿包。' },
+    { id: 'q7', groupId: null, createdBy: null, createdAt: daysAgo(60), updatedAt: daysAgo(60), category: '编程', difficulty: 1, question: '二进制 1010 等于十进制的多少？', options: ['8', '10', '12', '20'], answer: 1, explanation: '1010 = 8 + 0 + 2 + 0 = 10，二进制每一位代表 2 的幂次。' },
+    { id: 'q8', groupId: null, createdBy: null, createdAt: daysAgo(60), updatedAt: daysAgo(60), category: '编程', difficulty: 2, question: '计算机里“bug”这个词的由来和什么有关？', options: ['一只卡进继电器的飞蛾', '一种早期的病毒软件', '某位工程师的绰号', '一个缩写词'], answer: 0, explanation: '1947 年 Grace Hopper 的团队排查故障时，真的在继电器里抓到一只飞蛾，从此“bug”成了程序故障的代称。' },
+    { id: 'q9', groupId: null, createdBy: null, createdAt: daysAgo(60), updatedAt: daysAgo(60), category: '编程', difficulty: 3, question: '人工智能“深度学习”里的“深度”指什么？', options: ['算法很难懂', '神经网络的层数多', '数据量非常大', '电脑思考得很深'], answer: 1, explanation: '“深度”指神经网络的层数。层数越多，能学到的特征越抽象——比如从线条到形状，再到整张脸。' },
+    { id: 'q10', groupId: null, createdBy: null, createdAt: daysAgo(60), updatedAt: daysAgo(60), category: '工程', difficulty: 1, question: '大桥两端通常留有伸缩缝，是为了什么？', options: ['节省建材', '让行人休息', '应对热胀冷缩', '方便维修管线'], answer: 2, explanation: '桥梁随温度升降会热胀冷缩，伸缩缝给形变留出空间，避免结构被应力破坏。' },
+    { id: 'q11', groupId: null, createdBy: null, createdAt: daysAgo(60), updatedAt: daysAgo(60), category: '工程', difficulty: 2, question: '混凝土抗压但不抗拉，工程师用什么办法补强？', options: ['掺入更多水泥', '加入钢筋承受拉力', '加厚到十米', '表面刷防水涂层'], answer: 1, explanation: '钢筋混凝土里，钢筋负责承受拉力、混凝土负责承受压力，两者互补，这是现代建筑的基石。' },
+    { id: 'q12', groupId: null, createdBy: null, createdAt: daysAgo(60), updatedAt: daysAgo(60), category: '综合', difficulty: 2, question: '一天当中，人什么时候最高？', options: ['刚起床时', '中午', '傍晚', '睡前'], answer: 0, explanation: '白天站立时脊柱椎间盘被慢慢压缩；平躺睡一夜后椎间盘重新吸水回弹，所以刚起床时最高。' },
+    { id: 'q13', groupId: 'g1', createdBy: 't1', createdAt: daysAgo(20), updatedAt: daysAgo(20), category: '物理', difficulty: 2, question: '火星表面的太阳辐照强度大约只有地球的多少？', options: ['约 10%', '约 43%', '约 70%', '和地球一样'], answer: 1, explanation: '火星离太阳更远、大气稀薄，太阳辐照约为地球轨道的 43%，所以太阳能阵列需要铺得更大。' },
+    { id: 'q14', groupId: 'g1', createdBy: 't1', createdAt: daysAgo(20), updatedAt: daysAgo(20), category: '工程', difficulty: 2, question: 'NASA 好奇号火星车用的“核电池”属于哪一类？', options: ['小型裂变反应堆', '放射性同位素热电发生器 RTG', '锂离子电池组', '氢燃料电池'], answer: 1, explanation: 'RTG 利用钚-238 衰变产生的热量，经热电偶直接转换成电能，不依赖阳光，能持续供电十几年。' },
+    { id: 'q15', groupId: 'g1', createdBy: 't1', createdAt: daysAgo(20), updatedAt: daysAgo(20), category: '综合', difficulty: 1, question: '火星沙尘暴对太阳能发电最大的影响是？', options: ['遮挡阳光降低发电量', '把电池板吹走', '气温升高烧坏电路', '没有影响'], answer: 0, explanation: '沙尘遮蔽阳光并覆盖光伏板表面，发电量骤降，所以火星能源方案必须配储能或非太阳能备份。' },
+    { id: 'q16', groupId: 'g1', createdBy: 't1', createdAt: daysAgo(20), updatedAt: daysAgo(20), category: '物理', difficulty: 3, question: '火星上一天（太阳日）大约多长？', options: ['23 小时 37 分', '24 小时 37 分', '25 小时 37 分', '22 小时'], answer: 1, explanation: '火星自转周期约 24 小时 37 分，和地球非常接近，这对太阳能系统的昼夜循环设计很有利。' },
+  ]
+  const quizAttempts: QuizAttemptRec[] = [
+    { id: 'qa1', userId: 'u1', score: 80, total: 100, createdAt: daysAgo(3, 15) },
+    { id: 'qa2', userId: 'u1', score: 90, total: 100, createdAt: daysAgo(1, 16) },
+    { id: 'qa3', userId: 'u2', score: 60, total: 100, createdAt: daysAgo(2, 10) },
+  ]
   for (let d = 6; d >= 1; d--) {
     const count = randInt(2, 4)
     for (let i = 0; i < count; i++) {
@@ -252,7 +277,7 @@ function seed(): DB {
   for (const uid of ['u2', 'u3']) {
     focusSessions.push({ id: genId('fs'), userId: uid, durationMin: 25, type: 'focus', createdAt: daysAgo(randInt(1, 5), randInt(9, 20), randInt(0, 59)) })
   }
-  return { version: SCHEMA_VERSION, users, topics, projects, members, mindNodes, notes, tasks, taskLogs, checkins, feedbacks, resources, annotations, focusSessions, quizGroups, groupMembers, groupInvites, quizQuestions }
+  return { version: SCHEMA_VERSION, users, topics, projects, members, mindNodes, notes, tasks, taskLogs, checkins, feedbacks, resources, annotations, focusSessions, quizGroups, groupMembers, groupInvites, quizQuestions, quizAttempts }
 }
 
 export function loadDB(): DB {

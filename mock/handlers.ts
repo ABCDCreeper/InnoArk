@@ -1,4 +1,4 @@
-import type { DB, Feedback, GroupInviteRec, GroupMemberRec, Member, Project, QuizGroup, QuizQuestionRec, Role, Task, TaskStatus, User } from './db.ts'
+import type { DB, Feedback, GroupInviteRec, GroupMemberRec, Member, Project, QuizAttemptRec, QuizGroup, QuizQuestionRec, Role, Task, TaskStatus, User } from './db.ts'
 import { ROLE_RANK, createToken, genId, now, parseToken, pick, rankOf } from './db.ts'
 
 export interface Ctx {
@@ -169,6 +169,16 @@ function handleTaskStatusChange(db: DB, task: Task, user: User, oldStatus: TaskS
     })
     addFeedback(db, task.projectId, user, 'milestone', pick(FEEDBACK_POOL))
   }
+}
+
+function shuffled<T>(arr: T[]) {
+  const items = arr.slice()
+  for (let i = items.length - 1; i > 0; i--) {
+    const r = crypto.getRandomValues(new Uint32Array(1))[0] / 2 ** 32
+    const j = Math.floor(r * (i + 1))
+    ;[items[i], items[j]] = [items[j], items[i]]
+  }
+  return items
 }
 
 const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handler; public?: boolean }> = [
@@ -776,6 +786,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
       ctx.db.members = ctx.db.members.filter((m) => m.userId !== uid)
       ctx.db.groupMembers = ctx.db.groupMembers.filter((m) => m.userId !== uid)
       ctx.db.groupInvites = ctx.db.groupInvites.filter((i) => i.userId !== uid && i.inviterId !== uid)
+      ctx.db.quizAttempts = ctx.db.quizAttempts.filter((a) => a.userId !== uid)
       ctx.db.focusSessions = ctx.db.focusSessions.filter((s) => s.userId !== uid)
       ctx.db.checkins = ctx.db.checkins.filter((c) => c.userId !== uid)
       ctx.db.feedbacks = ctx.db.feedbacks.filter((f) => f.userId !== uid)
@@ -1071,6 +1082,66 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
       if (invite.status !== 'pending') throw badRequest('仅待处理的邀请可撤回')
       ctx.db.groupInvites = ctx.db.groupInvites.filter((i) => i.id !== invite.id)
       return { status: 204 }
+    },
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/quiz\/questions$/,
+    handler: (ctx) => {
+      const count = Math.min(Math.max(Number(ctx.query.get('count')) || 10, 1), 20)
+      const groupId = ctx.query.get('group')
+      let pool: QuizQuestionRec[]
+      let group: { id: string; name: string } | null = null
+      if (groupId) {
+        const g = getGroup(ctx.db, groupId)
+        if (!ctx.db.groupMembers.some((m) => m.groupId === g.id && m.userId === ctx.user.id) && rankOf(ctx.user) < 1) {
+          throw forbidden('只能抽取自己所在小组的题库')
+        }
+        const mine = ctx.db.quizQuestions.filter((q) => q.groupId === g.id)
+        const pub = ctx.db.quizQuestions.filter((q) => q.groupId === null)
+        if (g.quizMode === 'group') pool = mine
+        else if (g.quizMode === 'fallback') pool = mine.length > 0 ? mine : pub
+        else pool = [...mine, ...pub]
+        group = { id: g.id, name: g.name }
+      } else {
+        pool = ctx.db.quizQuestions.filter((q) => q.groupId === null)
+      }
+      return { status: 200, body: { items: shuffled(pool).slice(0, count), total: pool.length, group } }
+    },
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/quiz\/attempts$/,
+    handler: (ctx) => {
+      const score = Number(ctx.body.score)
+      const total = Number(ctx.body.total)
+      if (!Number.isInteger(score) || !Number.isInteger(total) || total <= 0 || score < 0 || score > total) {
+        throw badRequest('成绩数据无效')
+      }
+      const attempt: QuizAttemptRec = { id: genId('qa'), userId: ctx.user.id, score, total, createdAt: now() }
+      ctx.db.quizAttempts.push(attempt)
+      const mine = ctx.db.quizAttempts.filter((a) => a.userId === ctx.user.id)
+      const best = mine.reduce<QuizAttemptRec | null>((acc, a) => (!acc || a.score > acc.score ? a : acc), null)
+      return {
+        status: 201,
+        body: { attempt, best: best ? { score: best.score, total: best.total, createdAt: best.createdAt } : null },
+      }
+    },
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/quiz\/stats$/,
+    handler: (ctx) => {
+      const mine = ctx.db.quizAttempts.filter((a) => a.userId === ctx.user.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      const best = mine.reduce<QuizAttemptRec | null>((acc, a) => (!acc || a.score > acc.score ? a : acc), null)
+      return {
+        status: 200,
+        body: {
+          attempts: mine.length,
+          best: best ? { score: best.score, total: best.total, createdAt: best.createdAt } : null,
+          last: mine[0] ? { score: mine[0].score, total: mine[0].total, createdAt: mine[0].createdAt } : null,
+        },
+      }
     },
   },
 ]
