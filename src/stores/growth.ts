@@ -236,7 +236,8 @@ export const useGrowthStore = defineStore('growth', () => {
     fetcher()
       .then((res) => {
         if (res.items.length === 0) return
-        const q = res.items[hash % res.items.length]
+        const sorted = [...res.items].sort((a, b) => a.question.localeCompare(b.question))
+        const q = sorted[hash % sorted.length]
         dailyQuestion.value = { question: q.question, options: q.options, answer: q.answer, explanation: q.explanation }
       })
       .catch(() => {
