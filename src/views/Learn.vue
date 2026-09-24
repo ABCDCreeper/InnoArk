@@ -1,24 +1,49 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import {
-  NButton, NCard, NGrid, NGridItem, NPopconfirm, NProgress, NTag, NText,
+  NButton, NCard, NGrid, NGridItem, NPopconfirm, NProgress, NTag, NText, useMessage,
 } from 'naive-ui'
 import { COURSES, LEADERBOARD_BOTS, BADGES, xpForLevel } from '../data/courses'
 import type { LearnCourse } from '../data/courses'
 import { useLearnStore } from '../stores/learn'
 import { useAuthStore } from '../stores/auth'
+import { useGrowthStore } from '../stores/growth'
 import CourseMap from './learn/CourseMap.vue'
 import LessonPlayer from './learn/LessonPlayer.vue'
 
 const learn = useLearnStore()
 const auth = useAuthStore()
+const growth = useGrowthStore()
+const message = useMessage()
 
 type Phase = 'hub' | 'map' | 'player'
 const phase = ref<Phase>('hub')
 const activeCourse = ref<LearnCourse>(COURSES[0])
 const activeLessonIndex = ref(0)
 
-onMounted(() => learn.load())
+onMounted(async () => {
+  learn.load()
+  const gained = await growth.refreshTasks()
+  if (gained > 0) message.success(`每日任务完成，+${gained} XP`)
+})
+
+async function onSignIn() {
+  const res = growth.signIn()
+  if (!res) return
+  if (res.leveledUp) message.success(`升级啦！现在 Lv.${learn.level} ${learn.title}`)
+  else message.success(`签到成功，+${res.xpGained} XP`)
+}
+
+const calendarDays = computed(() => {
+  const now = new Date()
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const signed = new Set(growth.monthSigns.map((d) => Number(d.slice(8))))
+  return Array.from({ length: daysInMonth }, (_, i) => ({
+    day: i + 1,
+    signed: signed.has(i + 1),
+    isToday: i + 1 === now.getDate(),
+  }))
+})
 
 const xpPct = computed(() => {
   const base = xpForLevel(learn.level)
@@ -86,6 +111,38 @@ function onReset() {
           </n-popconfirm>
         </div>
       </n-card>
+
+      <div class="growth-row">
+        <n-card size="small" title="📅 每日签到">
+          <div class="sign-row">
+            <div>
+              <div class="sign-streak">🔥 连续 {{ growth.signStreak }} 天</div>
+              <n-text depth="3" style="font-size: 12px;">累计 {{ growth.signDays }} 天 · 连签最高 +20 XP</n-text>
+            </div>
+            <n-button type="primary" :disabled="growth.signedToday" @click="onSignIn">
+              {{ growth.signedToday ? '今日已签到' : '立即签到' }}
+            </n-button>
+          </div>
+          <div class="calendar">
+            <span
+              v-for="d in calendarDays"
+              :key="d.day"
+              class="cal-cell"
+              :class="{ signed: d.signed, today: d.isToday }"
+            >{{ d.day }}</span>
+          </div>
+        </n-card>
+
+        <n-card size="small" title="🎯 今日任务">
+          <div class="task-list">
+            <div v-for="t in growth.tasks" :key="t.id" class="task-row" :class="{ done: t.done }">
+              <span class="task-label">{{ t.emoji }} {{ t.label }}</span>
+              <span class="task-state">{{ t.done ? '✅ +10 XP' : '⏳ 进行中' }}</span>
+            </div>
+          </div>
+          <n-text depth="3" style="font-size: 12px;">全部完成额外 +5 XP，每天 0 点刷新</n-text>
+        </n-card>
+      </div>
 
       <div class="section-title">📚 选择一门课程开始冒险</div>
       <n-grid :cols="3" :x-gap="14" :y-gap="14" responsive="screen" item-responsive>
@@ -231,6 +288,80 @@ function onReset() {
   margin-top: 4px;
 }
 
+.growth-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.sign-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sign-streak {
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.cal-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  border-radius: 50%;
+  background: rgba(128, 128, 128, 0.08);
+  color: rgba(128, 128, 128, 0.7);
+}
+
+.cal-cell.signed {
+  background: rgba(24, 160, 88, 0.18);
+  color: #18a058;
+  font-weight: 700;
+}
+
+.cal-cell.today {
+  outline: 2px solid #18a058;
+  font-weight: 700;
+  color: #18a058;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.task-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(128, 128, 128, 0.06);
+  font-size: 14px;
+}
+
+.task-row.done {
+  background: rgba(24, 160, 88, 0.1);
+}
+
+.task-state {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
 .course-card {
   height: 100%;
   display: flex;
@@ -354,6 +485,10 @@ function onReset() {
 
 @media (max-width: 800px) {
   .hub-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .growth-row {
     grid-template-columns: 1fr;
   }
 

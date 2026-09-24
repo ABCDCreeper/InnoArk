@@ -13,6 +13,8 @@ interface LearnSave {
   badges: string[]
   streak: number
   lastLearnDate: string
+  todayLearned: number
+  todayDate: string
 }
 
 export interface LessonResult {
@@ -26,7 +28,7 @@ export interface LessonResult {
   record: LessonRecord | null
 }
 
-const emptySave = (): LearnSave => ({ xp: 0, totalCorrect: 0, completed: {}, badges: [], streak: 0, lastLearnDate: '' })
+const emptySave = (): LearnSave => ({ xp: 0, totalCorrect: 0, completed: {}, badges: [], streak: 0, lastLearnDate: '', todayLearned: 0, todayDate: '' })
 
 function dateKey(offsetDays = 0) {
   const d = new Date()
@@ -41,6 +43,13 @@ export const useLearnStore = defineStore('learn', () => {
   const save = ref<LearnSave>(emptySave())
   let loadedUser: string | null = null
 
+  function rollToday() {
+    if (save.value.todayDate !== dateKey()) {
+      save.value.todayLearned = 0
+      save.value.todayDate = dateKey()
+    }
+  }
+
   function load() {
     const uid = auth.user?.id ?? 'guest'
     if (loadedUser === uid) return
@@ -51,16 +60,26 @@ export const useLearnStore = defineStore('learn', () => {
     } catch {
       save.value = emptySave()
     }
+    rollToday()
   }
 
   function persist() {
     localStorage.setItem(`innoark_learn_${auth.user?.id ?? 'guest'}`, JSON.stringify(save.value))
   }
 
+  function addXp(n: number) {
+    load()
+    const oldLevel = levelOf(save.value.xp)
+    save.value.xp += n
+    persist()
+    return { leveledUp: levelOf(save.value.xp) > oldLevel }
+  }
+
   const xp = computed(() => save.value.xp)
   const level = computed(() => levelOf(save.value.xp))
   const title = computed(() => levelTitle(save.value.xp))
   const streak = computed(() => save.value.streak)
+  const todayLearned = computed(() => save.value.todayLearned)
   const badgeIds = computed(() => save.value.badges)
   const allCleared = computed(() => COURSES.every((c) => courseStats(c).crowned))
 
@@ -100,6 +119,7 @@ export const useLearnStore = defineStore('learn', () => {
 
   function finishLesson(course: LearnCourse, lessonIndex: number, correct: number, total: number): LessonResult {
     load()
+    rollToday()
     const lesson = course.lessons[lessonIndex]
     const prev = save.value.completed[lesson.id] ?? null
     const firstPass = !prev
@@ -110,6 +130,7 @@ export const useLearnStore = defineStore('learn', () => {
     const oldLevel = levelOf(save.value.xp)
     save.value.xp += gainedXp
     save.value.totalCorrect += correct
+    if (passed) save.value.todayLearned += 1
     let record: LessonRecord | null = null
     if (passed) {
       record = {
@@ -135,5 +156,5 @@ export const useLearnStore = defineStore('learn', () => {
     persist()
   }
 
-  return { xp, level, title, streak, badgeIds, load, recordOf, isLessonUnlocked, courseStats, allCleared, finishLesson, resetSave }
+  return { xp, level, title, streak, todayLearned, badgeIds, load, addXp, recordOf, isLessonUnlocked, courseStats, allCleared, finishLesson, resetSave }
 })
