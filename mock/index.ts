@@ -22,6 +22,17 @@ function readBody(req: IncomingMessage): Promise<Record<string, any>> {
   })
 }
 
+function sendJson(res: ServerResponse, status: number, body: unknown) {
+  res.statusCode = status
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  if (status === 204) {
+    res.end()
+    return
+  }
+  res.end(JSON.stringify(body).replace(/</g, '\\u003c'))
+}
+
 export default function mockPlugin(): Plugin {
   return {
     name: 'innoark-mock-api',
@@ -33,23 +44,13 @@ export default function mockPlugin(): Plugin {
         try {
           const body = await readBody(req)
           const result = dispatch(db, req.method!, url.pathname, url.searchParams, body, req.headers.authorization)
-          res.statusCode = result.status
-          res.setHeader('Content-Type', 'application/json; charset=utf-8')
-          if (result.status === 204) {
-            res.end()
-          } else {
-            res.end(JSON.stringify(result.body))
-          }
+          sendJson(res, result.status, result.body)
           persist(db)
         } catch (err) {
           if (err instanceof HttpError) {
-            res.statusCode = err.status
-            res.setHeader('Content-Type', 'application/json; charset=utf-8')
-            res.end(JSON.stringify({ error: { code: err.code, message: err.message } }))
+            sendJson(res, err.status, { error: { code: err.code, message: err.message } })
           } else {
-            res.statusCode = 500
-            res.setHeader('Content-Type', 'application/json; charset=utf-8')
-            res.end(JSON.stringify({ error: { code: 'INTERNAL_ERROR', message: '服务端内部错误' } }))
+            sendJson(res, 500, { error: { code: 'INTERNAL_ERROR', message: '服务端内部错误' } })
           }
         }
       })
