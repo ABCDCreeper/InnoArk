@@ -5,9 +5,12 @@ import { PlayOutline, RefreshOutline } from '@vicons/ionicons5'
 import { fetchQuizQuestions, fetchQuizStats, submitQuizAttempt } from '../api/quiz'
 import { fetchMyGroups } from '../api/group'
 import { ApiError } from '../api/request'
+import { useGrowthStore } from '../stores/growth'
+import type { CollectionCard } from '../data/collection'
 import type { QuizQuestion, QuizStats } from '../api/types'
 
 const message = useMessage()
+const growth = useGrowthStore()
 
 type Phase = 'start' | 'playing' | 'result'
 
@@ -27,6 +30,7 @@ const bankId = ref<string | null>(null)
 const oldBest = ref(-1)
 const isNewRecord = ref(false)
 const starting = ref(false)
+const quizDrop = ref<CollectionCard | null>(null)
 
 const PRAISES = [
   '答对啦！你就是行走的百科全书！',
@@ -96,6 +100,7 @@ async function start() {
     floaters.value = []
     oldBest.value = stats.value?.best?.score ?? -1
     isNewRecord.value = false
+    quizDrop.value = null
     phase.value = 'playing'
   } catch (err) {
     message.error(err instanceof ApiError ? err.message : '加载题目失败')
@@ -141,6 +146,8 @@ async function finish() {
   try {
     await submitQuizAttempt(finalScore, total.value)
     stats.value = await fetchQuizStats()
+    growth.markQuizPlayed()
+    quizDrop.value = growth.grantQuizDrop(Math.floor(finalScore / 10))
   } catch {
     message.error('成绩同步失败，但你的分数还在！')
   }
@@ -269,6 +276,10 @@ const LETTERS = ['A', 'B', 'C', 'D']
         <n-text v-else-if="stats?.best" depth="3" style="display: block; margin-bottom: 16px;">
           追平最佳纪录！下次试试全对 💪
         </n-text>
+        <div v-if="quizDrop" class="card-drop">
+          <span class="drop-emoji">{{ quizDrop.emoji }}</span>
+          🎁 获得新卡片「{{ quizDrop.name }}」，学习天地的图鉴等你翻牌！
+        </div>
         <div class="start-actions">
           <n-button type="primary" size="large" @click="start">
             <template #icon><n-icon><refresh-outline /></n-icon></template>
@@ -369,6 +380,25 @@ const LETTERS = ['A', 'B', 'C', 'D']
   display: flex;
   justify-content: center;
   padding-bottom: 8px;
+}
+
+.card-drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 460px;
+  margin: 0 auto 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  font-size: 14px;
+  animation: fade-in-up 0.4s ease;
+}
+
+.drop-emoji {
+  font-size: 22px;
 }
 
 .quiz-header {

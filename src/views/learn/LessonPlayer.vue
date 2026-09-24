@@ -4,13 +4,16 @@ import { NButton, NCard, NIcon, NProgress, NSpace, NText } from 'naive-ui'
 import { ArrowBackOutline } from '@vicons/ionicons5'
 import { bilibiliEmbedOf, videoTypeOf } from '../../data/courses'
 import type { LearnCourse } from '../../data/courses'
+import type { CollectionCard } from '../../data/collection'
 import { useLearnStore } from '../../stores/learn'
+import { useGrowthStore } from '../../stores/growth'
 import type { LessonResult } from '../../stores/learn'
 
 const props = defineProps<{ course: LearnCourse; lessonIndex: number }>()
 const emit = defineEmits<{ exit: []; next: [] }>()
 
 const learn = useLearnStore()
+const growth = useGrowthStore()
 
 type Phase = 'video' | 'quiz' | 'result'
 
@@ -25,6 +28,7 @@ const picked = ref<number | null>(null)
 const correctCount = ref(0)
 const streak = ref(0)
 const result = ref<LessonResult | null>(null)
+const cardDrop = ref<CollectionCard | null>(null)
 const celebrating = ref(false)
 
 const current = computed(() => lesson.value.questions[index.value])
@@ -77,6 +81,7 @@ function pick(i: number) {
 
 function submit() {
   result.value = learn.finishLesson(props.course, props.lessonIndex, correctCount.value, total.value)
+  cardDrop.value = result.value.passed ? growth.grantLessonDrop(props.course.id) : null
   phase.value = 'result'
   if (result.value.leveledUp) celebrating.value = true
 }
@@ -93,6 +98,7 @@ function nextStep() {
 
 function replay() {
   result.value = null
+  cardDrop.value = null
   celebrating.value = false
   startQuiz()
 }
@@ -211,6 +217,11 @@ function closeCelebration() {
               <span class="badge-emoji">{{ b.emoji }}</span>
               <span>解锁徽章「{{ b.name }}」· {{ b.desc }}</span>
             </div>
+          </div>
+
+          <div v-if="cardDrop" class="card-drop">
+            <span class="drop-emoji">{{ cardDrop.emoji }}</span>
+            <span>🎁 获得新卡片「{{ cardDrop.name }}」，去图鉴看看吧！</span>
           </div>
 
           <n-space justify="center" style="margin-top: 18px;">
@@ -489,6 +500,36 @@ function closeCelebration() {
 
 .badge-emoji {
   font-size: 22px;
+}
+
+.card-drop {
+  margin: 12px auto 0;
+  max-width: 420px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  font-size: 14px;
+  animation: flip-in 0.5s ease;
+}
+
+.drop-emoji {
+  font-size: 22px;
+  animation: bounce-in 0.5s ease 0.15s backwards;
+}
+
+@keyframes flip-in {
+  from {
+    transform: rotateY(90deg);
+    opacity: 0;
+  }
+  to {
+    transform: rotateY(0);
+    opacity: 1;
+  }
 }
 
 .celebrate-overlay {

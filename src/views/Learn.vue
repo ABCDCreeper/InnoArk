@@ -5,6 +5,7 @@ import {
 } from 'naive-ui'
 import { COURSES, LEADERBOARD_BOTS, BADGES, xpForLevel } from '../data/courses'
 import type { LearnCourse } from '../data/courses'
+import { CARD_SETS, cardsOfSet } from '../data/collection'
 import { useLearnStore } from '../stores/learn'
 import { useAuthStore } from '../stores/auth'
 import { useGrowthStore } from '../stores/growth'
@@ -16,10 +17,11 @@ const auth = useAuthStore()
 const growth = useGrowthStore()
 const message = useMessage()
 
-type Phase = 'hub' | 'map' | 'player'
+type Phase = 'hub' | 'map' | 'player' | 'collection'
 const phase = ref<Phase>('hub')
 const activeCourse = ref<LearnCourse>(COURSES[0])
 const activeLessonIndex = ref(0)
+const flippedCards = ref<Set<string>>(new Set())
 
 onMounted(async () => {
   learn.load()
@@ -57,6 +59,15 @@ const totalStars = computed(() =>
 const maxStars = computed(() =>
   COURSES.reduce((sum, c) => sum + learn.courseStats(c).maxStars, 0),
 )
+
+const totalCards = CARD_SETS.reduce((sum, s) => sum + cardsOfSet(s.id).length, 0)
+
+function toggleFlip(id: string) {
+  const next = new Set(flippedCards.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  flippedCards.value = next
+}
 
 const board = computed(() => {
   const rows = [
@@ -144,6 +155,16 @@ function onReset() {
         </n-card>
       </div>
 
+      <n-card size="small" class="collection-entry" @click="phase = 'collection'">
+        <div class="collection-entry-row">
+          <span class="entry-title">🃏 知识图鉴</span>
+          <n-text depth="3" style="font-size: 13px;">
+            已收集 {{ growth.collection.length }} / {{ totalCards }} 张 · 集齐一套 +30 XP
+          </n-text>
+          <n-button size="tiny" tertiary>去翻卡 →</n-button>
+        </div>
+      </n-card>
+
       <div class="section-title">📚 选择一门课程开始冒险</div>
       <n-grid :cols="3" :x-gap="14" :y-gap="14" responsive="screen" item-responsive>
         <n-grid-item v-for="course in COURSES" :key="course.id" span="3 m:1">
@@ -203,6 +224,48 @@ function onReset() {
         </n-card>
       </div>
     </template>
+
+    <n-card v-else-if="phase === 'collection'" size="small" class="collection-page">
+      <div class="player-header">
+        <n-button quaternary circle size="small" @click="phase = 'hub'">←</n-button>
+        <span class="lesson-title">🃏 知识图鉴</span>
+        <n-text depth="3" style="font-size: 13px;">{{ growth.collection.length }} / {{ totalCards }}</n-text>
+      </div>
+      <n-text depth="3" style="font-size: 12px;">通关课时和闯关答对 6 题以上会掉落新卡，点击卡片翻面看冷知识。</n-text>
+
+      <div v-for="set in CARD_SETS" :key="set.id" class="set-block">
+        <div class="set-head">
+          <span class="set-name">{{ set.emoji }} {{ set.name }}</span>
+          <span class="set-count">
+            {{ growth.setOwnedCount(set.id) }} / {{ cardsOfSet(set.id).length }}
+            <n-tag v-if="growth.setComplete(set.id)" type="warning" size="tiny" :bordered="false" round>👑 已集齐</n-tag>
+          </span>
+        </div>
+        <div class="card-grid">
+          <div
+            v-for="card in cardsOfSet(set.id)"
+            :key="card.id"
+            class="collect-card"
+            :class="{ owned: growth.collection.includes(card.id) }"
+            @click="toggleFlip(card.id)"
+          >
+            <template v-if="growth.collection.includes(card.id)">
+              <template v-if="flippedCards.has(card.id)">
+                <span class="card-fact">{{ card.fact }}</span>
+              </template>
+              <template v-else>
+                <span class="card-emoji">{{ card.emoji }}</span>
+                <span class="card-name">{{ card.name }}</span>
+              </template>
+            </template>
+            <template v-else>
+              <span class="card-emoji locked">🔒</span>
+              <span class="card-name locked">未解锁</span>
+            </template>
+          </div>
+        </div>
+      </div>
+    </n-card>
 
     <CourseMap
       v-else-if="phase === 'map'"
@@ -362,6 +425,110 @@ function onReset() {
   opacity: 0.85;
 }
 
+.collection-entry {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.collection-entry:hover {
+  transform: translateY(-2px);
+}
+
+.collection-entry-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.entry-title {
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.collection-page {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.set-block {
+  margin-top: 18px;
+}
+
+.set-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.set-name {
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.set-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+
+.collect-card {
+  aspect-ratio: 3 / 4;
+  border-radius: 10px;
+  border: 1.5px solid rgba(128, 128, 128, 0.25);
+  background: rgba(128, 128, 128, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+  text-align: center;
+}
+
+.collect-card.owned {
+  border-color: #f0a020;
+  background: rgba(240, 160, 32, 0.08);
+}
+
+.collect-card.owned:hover {
+  transform: translateY(-3px) rotateY(12deg);
+}
+
+.card-emoji {
+  font-size: 26px;
+}
+
+.card-emoji.locked {
+  filter: grayscale(1);
+  opacity: 0.4;
+}
+
+.card-name {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.card-name.locked {
+  opacity: 0.4;
+}
+
+.card-fact {
+  font-size: 10.5px;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
 .course-card {
   height: 100%;
   display: flex;
@@ -494,6 +661,10 @@ function onReset() {
 
   .badge-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .card-grid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 </style>

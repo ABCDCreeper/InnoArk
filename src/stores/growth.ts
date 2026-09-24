@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 import { useAuthStore } from './auth'
 import { useLearnStore } from './learn'
 import { fetchFocusStats } from '../api/focus'
+import { CARDS, cardsOfSet, pickOne } from '../data/collection'
+import type { CollectionCard } from '../data/collection'
 
 export interface WrongItem { question: string; options: string[]; answer: number; explanation: string; date: string }
 
@@ -164,5 +166,42 @@ export const useGrowthStore = defineStore('growth', () => {
     grantTaskXp()
   }
 
-  return { signedToday, signDays, signStreak, monthSigns, tasks, wrongBook, collection, signIn, refreshTasks, markQuizPlayed }
+  const COURSE_SET: Record<string, string> = { 'c-kitchen': 's-kitchen', 'c-body': 's-body', 'c-code': 's-code' }
+
+  function grantFromPool(pool: CollectionCard[]): CollectionCard | null {
+    const fresh = pool.filter((c) => !save.value.collection.includes(c.id))
+    if (fresh.length === 0) return null
+    const card = pickOne(fresh)
+    save.value.collection.push(card.id)
+    const owned = cardsOfSet(card.set)
+    const complete = owned.every((c) => save.value.collection.includes(c.id))
+    if (complete) learn.addXp(30)
+    persist()
+    return card
+  }
+
+  function grantLessonDrop(courseId: string): CollectionCard | null {
+    load()
+    const setId = COURSE_SET[courseId]
+    if (!setId) return null
+    return grantFromPool(cardsOfSet(setId))
+  }
+
+  function grantQuizDrop(correct: number): CollectionCard | null {
+    load()
+    if (correct < 6) return null
+    return grantFromPool(CARDS)
+  }
+
+  function setComplete(setId: string) {
+    load()
+    return cardsOfSet(setId).every((c) => save.value.collection.includes(c.id))
+  }
+
+  function setOwnedCount(setId: string) {
+    load()
+    return cardsOfSet(setId).filter((c) => save.value.collection.includes(c.id)).length
+  }
+
+  return { signedToday, signDays, signStreak, monthSigns, tasks, wrongBook, collection, signIn, refreshTasks, markQuizPlayed, grantLessonDrop, grantQuizDrop, setComplete, setOwnedCount }
 })
