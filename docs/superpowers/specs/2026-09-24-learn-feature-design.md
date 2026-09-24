@@ -126,5 +126,12 @@ interface LearnSave {
 
 ## 实施约定
 
-- 提交遵循 Conventional Commits，参考仓库既有风格：小写英文祈使句、按里程碑小步提交（如 `feat: add learn hub with courses and leaderboard`）。
+- 提交遵循 Conventional Commits，参考仓库既有风格：小写英文祈使句、不 push。
+- **每个小功能一个提交**，按依赖顺序拆分，参考序列（实现时可微调）：
+  1. `feat: add learn course seed data` — data/courses.ts：3 门课、课时、题目、占位视频链接
+  2. `feat: add learn progress store` — stores/learn.ts：localStorage 存档、XP/等级计算、徽章判定、连击天数
+  3. `feat: add lesson player with video and quiz` — LessonPlayer.vue：视频播放、答题、结算动效与 XP/徽章庆祝
+  4. `feat: add course map with lesson unlocking` — CourseMap.vue：闯关地图、顺序解锁动画、星级与奖杯
+  5. `feat: add learn hub with leaderboard and badges` — Learn.vue：选课大厅、排行榜、徽章墙、重置存档
+  6. `feat: add learn route and sidebar entry` — 路由 + 侧边栏入口
 - 尽量少写代码注释，只写必要约束。
