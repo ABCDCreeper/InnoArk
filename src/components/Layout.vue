@@ -20,6 +20,7 @@ import {
   AlbumsOutline as AlbumsIcon,
   PeopleOutline as PeopleIcon,
   BulbOutline as LearnIcon,
+  StatsChartOutline as StatsIcon,
 } from '@vicons/ionicons5'
 
 import { RouterLink, useRoute, useRouter } from 'vue-router'
@@ -38,6 +39,7 @@ const studentMenu: MenuDef[] = [
   { key: '/resources', title: '资源库', icon: CompassIcon },
   { key: '/quiz', title: '闯关', icon: TrophyIcon },
   { key: '/learn', title: '学习天地', icon: LearnIcon },
+  { key: '/profile', title: '成长档案', icon: StatsIcon },
   { key: '/my-groups', title: '我的分组', icon: PeopleIcon },
   { key: '/focus', title: '专注', icon: TimerIcon },
   { key: '/settings', title: '设置', icon: SettingsIcon },
@@ -49,6 +51,7 @@ const teacherMenu: MenuDef[] = [
   { key: '/teacher', title: '团队总览', icon: SchoolIcon },
   { key: '/groups', title: '题库管理', icon: AlbumsIcon },
   { key: '/learn', title: '学习天地', icon: LearnIcon },
+  { key: '/profile', title: '成长档案', icon: StatsIcon },
   { key: '/projects', title: '项目', icon: RocketIcon },
   { key: '/settings', title: '设置', icon: SettingsIcon },
   { key: '/about', title: '关于', icon: AboutIcon },
@@ -59,6 +62,7 @@ const managerMenu: MenuDef[] = [
   { key: '/admin/users', title: '用户管理', icon: PeopleIcon },
   { key: '/groups', title: '题库管理', icon: AlbumsIcon },
   { key: '/learn', title: '学习天地', icon: LearnIcon },
+  { key: '/profile', title: '成长档案', icon: StatsIcon },
   { key: '/teacher', title: '团队总览', icon: SchoolIcon },
   { key: '/projects', title: '项目', icon: RocketIcon },
   { key: '/settings', title: '设置', icon: SettingsIcon },
