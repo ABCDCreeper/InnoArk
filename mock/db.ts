@@ -1,19 +1,27 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-export type Role = 'student' | 'teacher'
+export type Role = 'student' | 'teacher' | 'schooladmin' | 'admin' | 'superadmin'
 export type ProjectStatus = 'active' | 'finished'
 export type TaskStatus = 'todo' | 'doing' | 'review' | 'done'
+
+export const ROLE_RANK: Record<Role, number> = { student: 0, teacher: 1, schooladmin: 2, admin: 3, superadmin: 4 }
+
+export function rankOf(user: User) {
+  return ROLE_RANK[user.role] ?? 0
+}
 
 export interface User { id: string; username: string; password: string; name: string; role: Role }
 export interface Topic { id: string; title: string; summary: string; subjects: string[]; tags: string[]; difficulty: '入门' | '进阶' | '挑战' }
 export interface Project {
   id: string
   topicId: string
+  groupId?: string | null
   name: string
   status: ProjectStatus
   inviteCode: string
   leaderId: string
+  description?: string
   createdAt: string
   updatedAt: string
   finishedAt: string | null
@@ -40,6 +48,7 @@ export interface Annotation { id: string; projectId: string; userId: string; con
 export interface FocusSession { id: string; userId: string; durationMin: number; type: 'focus' | 'break'; createdAt: string }
 
 export interface DB {
+  version: number
   users: User[]
   topics: Topic[]
   projects: Project[]
@@ -57,6 +66,8 @@ export interface DB {
 
 const DATA_DIR = join(process.cwd(), '.mock-data')
 const DATA_FILE = join(DATA_DIR, 'db.json')
+
+const SCHEMA_VERSION = 2
 
 let seq = 0
 export function genId(prefix: string) {
@@ -91,6 +102,9 @@ function seed(): DB {
     { id: 'u3', username: 'student3', password: '123456', name: '王五', role: 'student' },
     { id: 'u4', username: 'student4', password: '123456', name: '赵六', role: 'student' },
     { id: 't1', username: 'teacher', password: '123456', name: '王老师', role: 'teacher' },
+    { id: 'u5', username: 'schooladmin', password: '123456', name: '校管理员', role: 'schooladmin' },
+    { id: 'u6', username: 'admin', password: '123456', name: '平台管理员', role: 'admin' },
+    { id: 'u7', username: 'superadmin', password: '123456', name: '超级管理员', role: 'superadmin' },
   ]
   const topics: Topic[] = [
     { id: 'topic1', title: '火星基地能源方案设计', summary: '为火星基地设计可持续能源系统，比较太阳能、核能与风能的组合方案，输出能量平衡计算与架构图。', subjects: ['物理', '工程'], tags: ['能源', '太空'], difficulty: '挑战' },
@@ -203,13 +217,14 @@ function seed(): DB {
   for (const uid of ['u2', 'u3']) {
     focusSessions.push({ id: genId('fs'), userId: uid, durationMin: 25, type: 'focus', createdAt: daysAgo(randInt(1, 5), randInt(9, 20), randInt(0, 59)) })
   }
-  return { users, topics, projects, members, mindNodes, notes, tasks, taskLogs, checkins, feedbacks, resources, annotations, focusSessions }
+  return { version: SCHEMA_VERSION, users, topics, projects, members, mindNodes, notes, tasks, taskLogs, checkins, feedbacks, resources, annotations, focusSessions }
 }
 
 export function loadDB(): DB {
   if (existsSync(DATA_FILE)) {
     try {
-      return JSON.parse(readFileSync(DATA_FILE, 'utf-8')) as DB
+      const parsed = JSON.parse(readFileSync(DATA_FILE, 'utf-8')) as DB
+      if (parsed.version === SCHEMA_VERSION) return parsed
     } catch {
       // fall through to reseed
     }

@@ -1,5 +1,5 @@
-import type { DB, Feedback, Member, Project, Task, TaskStatus, User } from './db.ts'
-import { createToken, genId, now, parseToken, pick } from './db.ts'
+import type { DB, Feedback, Member, Project, Role, Task, TaskStatus, User } from './db.ts'
+import { ROLE_RANK, createToken, genId, now, parseToken, pick, rankOf } from './db.ts'
 
 export interface Ctx {
   db: DB
@@ -211,7 +211,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
     pattern: /^\/api\/projects\/([^/]+)$/,
     handler: (ctx) => {
       const project = getProject(ctx.db, ctx.params[0])
-      if (ctx.user.role !== 'teacher') memberOf(ctx.db, project.id, ctx.user.id)
+      if (rankOf(ctx.user) < 1) memberOf(ctx.db, project.id, ctx.user.id)
       return { status: 200, body: projectView(ctx.db, project) }
     },
   },
@@ -239,7 +239,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
     pattern: /^\/api\/projects\/([^/]+)\/mind-nodes$/,
     handler: (ctx) => {
       const project = getProject(ctx.db, ctx.params[0])
-      if (ctx.user.role !== 'teacher') memberOf(ctx.db, project.id, ctx.user.id)
+      if (rankOf(ctx.user) < 1) memberOf(ctx.db, project.id, ctx.user.id)
       const items = ctx.db.mindNodes.filter((n) => n.projectId === project.id)
       return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
     },
@@ -304,7 +304,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
     pattern: /^\/api\/projects\/([^/]+)\/notes$/,
     handler: (ctx) => {
       const project = getProject(ctx.db, ctx.params[0])
-      if (ctx.user.role !== 'teacher') memberOf(ctx.db, project.id, ctx.user.id)
+      if (rankOf(ctx.user) < 1) memberOf(ctx.db, project.id, ctx.user.id)
       const items = ctx.db.notes.filter((n) => n.projectId === project.id)
       return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
     },
@@ -365,7 +365,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
     pattern: /^\/api\/projects\/([^/]+)\/tasks$/,
     handler: (ctx) => {
       const project = getProject(ctx.db, ctx.params[0])
-      if (ctx.user.role !== 'teacher') memberOf(ctx.db, project.id, ctx.user.id)
+      if (rankOf(ctx.user) < 1) memberOf(ctx.db, project.id, ctx.user.id)
       let items = ctx.db.tasks.filter((t) => t.projectId === project.id)
       const status = ctx.query.get('status')
       const assigneeId = ctx.query.get('assigneeId')
@@ -453,7 +453,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
     pattern: /^\/api\/projects\/([^/]+)\/task-logs$/,
     handler: (ctx) => {
       const project = getProject(ctx.db, ctx.params[0])
-      if (ctx.user.role !== 'teacher') memberOf(ctx.db, project.id, ctx.user.id)
+      if (rankOf(ctx.user) < 1) memberOf(ctx.db, project.id, ctx.user.id)
       const items = ctx.db.taskLogs
         .filter((l) => l.projectId === project.id)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -465,7 +465,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
     pattern: /^\/api\/projects\/([^/]+)\/checkins$/,
     handler: (ctx) => {
       const project = getProject(ctx.db, ctx.params[0])
-      if (ctx.user.role !== 'teacher') memberOf(ctx.db, project.id, ctx.user.id)
+      if (rankOf(ctx.user) < 1) memberOf(ctx.db, project.id, ctx.user.id)
       const items = ctx.db.checkins.filter((c) => c.projectId === project.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
     },
@@ -490,7 +490,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
     pattern: /^\/api\/projects\/([^/]+)\/feedbacks$/,
     handler: (ctx) => {
       const project = getProject(ctx.db, ctx.params[0])
-      if (ctx.user.role !== 'teacher') memberOf(ctx.db, project.id, ctx.user.id)
+      if (rankOf(ctx.user) < 1) memberOf(ctx.db, project.id, ctx.user.id)
       const items = ctx.db.feedbacks.filter((f) => f.projectId === project.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
     },
@@ -560,7 +560,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
     method: 'GET',
     pattern: /^\/api\/teacher\/projects$/,
     handler: (ctx) => {
-      if (ctx.user.role !== 'teacher') throw forbidden('仅教师可访问')
+      if (rankOf(ctx.user) < 1) throw forbidden('仅教师及以上可访问')
       const items = ctx.db.projects
         .slice()
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
@@ -573,7 +573,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
     pattern: /^\/api\/projects\/([^/]+)\/annotations$/,
     handler: (ctx) => {
       const project = getProject(ctx.db, ctx.params[0])
-      if (ctx.user.role !== 'teacher') memberOf(ctx.db, project.id, ctx.user.id)
+      if (rankOf(ctx.user) < 1) memberOf(ctx.db, project.id, ctx.user.id)
       const items = ctx.db.annotations.filter((a) => a.projectId === project.id).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
       return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
     },
@@ -582,7 +582,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
     method: 'POST',
     pattern: /^\/api\/projects\/([^/]+)\/annotations$/,
     handler: (ctx) => {
-      if (ctx.user.role !== 'teacher') throw forbidden('仅教师可添加批注')
+      if (rankOf(ctx.user) < 1) throw forbidden('仅教师及以上可添加批注')
       const project = getProject(ctx.db, ctx.params[0])
       const content = String(ctx.body.content || '').trim()
       if (!content) throw badRequest('批注内容不能为空')
@@ -596,7 +596,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
     pattern: /^\/api\/projects\/([^/]+)\/archive$/,
     handler: (ctx) => {
       const project = getProject(ctx.db, ctx.params[0])
-      if (ctx.user.role !== 'teacher') memberOf(ctx.db, project.id, ctx.user.id)
+      if (rankOf(ctx.user) < 1) memberOf(ctx.db, project.id, ctx.user.id)
       if (project.status !== 'finished') throw new HttpError(409, 'PROJECT_NOT_FINISHED', '项目结题后即可生成科创档案')
       const members = projectMembers(ctx.db, project.id).map((u) => {
         const mine = ctx.db.tasks.filter((t) => t.projectId === project.id && t.assigneeId === u.id)
@@ -627,6 +627,81 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
           annotations: ctx.db.annotations.filter((a) => a.projectId === project.id),
         },
       }
+    },
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/admin\/users$/,
+    handler: (ctx) => {
+      if (rankOf(ctx.user) < 2) throw forbidden('仅校管理员及以上可访问')
+      let items = ctx.db.users.filter((u) => rankOf(u) < rankOf(ctx.user))
+      const keyword = ctx.query.get('keyword')?.toLowerCase()
+      const role = ctx.query.get('role')
+      if (role) items = items.filter((u) => u.role === role)
+      if (keyword) items = items.filter((u) => u.username.toLowerCase().includes(keyword) || u.name.toLowerCase().includes(keyword))
+      items = items.slice().sort((a, b) => rankOf(b) - rankOf(a))
+      return { status: 200, body: { items: items.map(userBrief), total: items.length, page: 1, pageSize: items.length } }
+    },
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/admin\/users$/,
+    handler: (ctx) => {
+      if (rankOf(ctx.user) < 2) throw forbidden('仅校管理员及以上可创建账号')
+      const { username, password, name, role } = ctx.body
+      if (!username || !password || !name) throw badRequest('用户名、密码和姓名不能为空')
+      if (String(password).length < 6) throw badRequest('密码至少 6 位')
+      if (!(role in ROLE_RANK) || ROLE_RANK[role as Role] >= rankOf(ctx.user)) throw badRequest('角色层级越界')
+      if (ctx.db.users.some((u) => u.username === username)) throw new HttpError(409, 'USERNAME_TAKEN', '用户名已被占用')
+      const user: User = { id: genId('u'), username, password, name, role }
+      ctx.db.users.push(user)
+      return { status: 201, body: userBrief(user) }
+    },
+  },
+  {
+    method: 'PATCH',
+    pattern: /^\/api\/admin\/users\/([^/]+)$/,
+    handler: (ctx) => {
+      if (rankOf(ctx.user) < 2) throw forbidden('仅校管理员及以上可管理账号')
+      const target = ctx.db.users.find((u) => u.id === ctx.params[0])
+      if (!target) throw notFound('用户不存在')
+      if (target.id === ctx.user.id) throw badRequest('不能修改自己')
+      if (rankOf(target) >= rankOf(ctx.user)) throw forbidden('只能管理低于自己层级的账号')
+      if (ctx.body.name !== undefined) {
+        if (!ctx.body.name) throw badRequest('姓名不能为空')
+        target.name = ctx.body.name
+      }
+      if (ctx.body.password !== undefined) {
+        if (String(ctx.body.password).length < 6) throw badRequest('密码至少 6 位')
+        target.password = ctx.body.password
+      }
+      if (ctx.body.role !== undefined) {
+        if (!(ctx.body.role in ROLE_RANK) || ROLE_RANK[ctx.body.role as Role] >= rankOf(ctx.user)) throw badRequest('角色层级越界')
+        target.role = ctx.body.role
+      }
+      return { status: 200, body: userBrief(target) }
+    },
+  },
+  {
+    method: 'DELETE',
+    pattern: /^\/api\/admin\/users\/([^/]+)$/,
+    handler: (ctx) => {
+      if (rankOf(ctx.user) < 2) throw forbidden('仅校管理员及以上可管理账号')
+      const target = ctx.db.users.find((u) => u.id === ctx.params[0])
+      if (!target) throw notFound('用户不存在')
+      if (target.id === ctx.user.id) throw badRequest('不能删除自己')
+      if (rankOf(target) >= rankOf(ctx.user)) throw forbidden('只能管理低于自己层级的账号')
+      const uid = target.id
+      ctx.db.members = ctx.db.members.filter((m) => m.userId !== uid)
+      ctx.db.focusSessions = ctx.db.focusSessions.filter((s) => s.userId !== uid)
+      ctx.db.checkins = ctx.db.checkins.filter((c) => c.userId !== uid)
+      ctx.db.feedbacks = ctx.db.feedbacks.filter((f) => f.userId !== uid)
+      ctx.db.annotations = ctx.db.annotations.filter((a) => a.userId !== uid)
+      for (const t of ctx.db.tasks) {
+        if (t.assigneeId === uid) t.assigneeId = null
+      }
+      ctx.db.users = ctx.db.users.filter((u) => u.id !== uid)
+      return { status: 204 }
     },
   },
 ]
