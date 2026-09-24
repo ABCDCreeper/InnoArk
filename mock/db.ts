@@ -47,9 +47,32 @@ export interface Resource { id: string; title: string; category: string; descrip
 export interface Annotation { id: string; projectId: string; userId: string; content: string; createdAt: string }
 export interface FocusSession { id: string; userId: string; durationMin: number; type: 'focus' | 'break'; createdAt: string }
 
+export type QuizMode = 'group' | 'fallback' | 'mixed'
+
+export interface QuizGroup { id: string; name: string; description: string; quizMode: QuizMode; inviteCode: string; createdAt: string; updatedAt: string }
+export interface GroupMemberRec { id: string; groupId: string; userId: string; role: 'teacher' | 'member'; joinedAt: string }
+export interface GroupInviteRec { id: string; groupId: string; userId: string; inviterId: string; status: 'pending' | 'accepted' | 'declined'; createdAt: string }
+export interface QuizQuestionRec {
+  id: string
+  groupId: string | null
+  createdBy: string | null
+  createdAt: string | null
+  updatedAt: string | null
+  category: string
+  difficulty: number
+  question: string
+  options: string[]
+  answer: number
+  explanation: string
+}
+
 export interface DB {
   version: number
   users: User[]
+  quizGroups: QuizGroup[]
+  groupMembers: GroupMemberRec[]
+  groupInvites: GroupInviteRec[]
+  quizQuestions: QuizQuestionRec[]
   topics: Topic[]
   projects: Project[]
   members: Member[]
@@ -113,8 +136,8 @@ function seed(): DB {
     { id: 'topic4', title: '声波可视化艺术装置', summary: '将声音信号实时转化为可视化图案，结合物理原理与艺术表达，制作交互装置。', subjects: ['物理', '艺术'], tags: ['声学', '交互'], difficulty: '入门' },
   ]
   const projects: Project[] = [
-    { id: 'p1', topicId: 'topic1', name: '火星基地能源方案', status: 'active', inviteCode: 'P1-7F3A', leaderId: 'u1', createdAt: daysAgo(12), updatedAt: daysAgo(0, 9), finishedAt: null },
-    { id: 'p2', topicId: 'topic2', name: '校园智能垃圾分类助手', status: 'finished', inviteCode: 'P2-9B1C', leaderId: 'u1', createdAt: daysAgo(40), updatedAt: daysAgo(6, 16), finishedAt: daysAgo(6, 17) },
+    { id: 'p1', topicId: 'topic1', groupId: 'g1', name: '火星基地能源方案', status: 'active', inviteCode: 'P1-7F3A', leaderId: 'u1', description: '为火星基地设计可持续能源系统，比较太阳能、核能与风能的组合方案，输出能量平衡计算与架构图。', createdAt: daysAgo(12), updatedAt: daysAgo(0, 9), finishedAt: null },
+    { id: 'p2', topicId: 'topic2', name: '校园智能垃圾分类助手', status: 'finished', inviteCode: 'P2-9B1C', leaderId: 'u1', description: '设计一款面向校园的智能垃圾分类工具，结合图像识别与科普互动。', createdAt: daysAgo(40), updatedAt: daysAgo(6, 16), finishedAt: daysAgo(6, 17) },
   ]
   const members: Member[] = [
     { id: 'm1', projectId: 'p1', userId: 'u1', joinedAt: daysAgo(12) },
@@ -208,6 +231,18 @@ function seed(): DB {
     { id: 'a3', projectId: 'p2', userId: 't1', content: '结题报告结构完整，注意补充能耗对比的量化结论。', createdAt: daysAgo(7, 10) },
   ]
   const focusSessions: FocusSession[] = []
+  const quizGroups: QuizGroup[] = [
+    { id: 'g1', name: '火星能源课题小组', description: '围绕火星基地能源方案的跨班级课题小组', quizMode: 'fallback', inviteCode: 'G1-KM3X', createdAt: daysAgo(30), updatedAt: daysAgo(2) },
+  ]
+  const groupMembers: GroupMemberRec[] = [
+    { id: 'gm1', groupId: 'g1', userId: 't1', role: 'teacher', joinedAt: daysAgo(30) },
+    { id: 'gm2', groupId: 'g1', userId: 'u1', role: 'member', joinedAt: daysAgo(28) },
+    { id: 'gm3', groupId: 'g1', userId: 'u2', role: 'member', joinedAt: daysAgo(25) },
+  ]
+  const groupInvites: GroupInviteRec[] = [
+    { id: 'gi1', groupId: 'g1', userId: 'u4', inviterId: 't1', status: 'pending', createdAt: daysAgo(1, 9) },
+  ]
+  const quizQuestions: QuizQuestionRec[] = []
   for (let d = 6; d >= 1; d--) {
     const count = randInt(2, 4)
     for (let i = 0; i < count; i++) {
@@ -217,7 +252,7 @@ function seed(): DB {
   for (const uid of ['u2', 'u3']) {
     focusSessions.push({ id: genId('fs'), userId: uid, durationMin: 25, type: 'focus', createdAt: daysAgo(randInt(1, 5), randInt(9, 20), randInt(0, 59)) })
   }
-  return { version: SCHEMA_VERSION, users, topics, projects, members, mindNodes, notes, tasks, taskLogs, checkins, feedbacks, resources, annotations, focusSessions }
+  return { version: SCHEMA_VERSION, users, topics, projects, members, mindNodes, notes, tasks, taskLogs, checkins, feedbacks, resources, annotations, focusSessions, quizGroups, groupMembers, groupInvites, quizQuestions }
 }
 
 export function loadDB(): DB {

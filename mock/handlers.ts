@@ -1,4 +1,4 @@
-import type { DB, Feedback, Member, Project, Role, Task, TaskStatus, User } from './db.ts'
+import type { DB, Feedback, GroupInviteRec, GroupMemberRec, Member, Project, QuizGroup, QuizQuestionRec, Role, Task, TaskStatus, User } from './db.ts'
 import { ROLE_RANK, createToken, genId, now, parseToken, pick, rankOf } from './db.ts'
 
 export interface Ctx {
@@ -64,11 +64,72 @@ function touchProject(project: Project) {
 
 function projectView(db: DB, project: Project) {
   const topic = db.topics.find((t) => t.id === project.topicId)
+  const group = project.groupId ? db.quizGroups.find((g) => g.id === project.groupId) : null
   return {
     ...project,
+    description: project.description ?? '',
     topic: topic ? { id: topic.id, title: topic.title, subjects: topic.subjects } : null,
+    group: group ? { id: group.id, name: group.name } : null,
     members: projectMembers(db, project.id).map(userBrief),
     progress: projectProgress(db, project.id),
+  }
+}
+
+function getGroup(db: DB, id: string): QuizGroup {
+  const group = db.quizGroups.find((g) => g.id === id)
+  if (!group) throw notFound('用户组不存在')
+  return group
+}
+
+function requireGroupLead(db: DB, groupId: string, user: User) {
+  if (rankOf(user) < 1) throw forbidden('仅教师可管理用户组')
+  if (!db.groupMembers.some((m) => m.groupId === groupId && m.userId === user.id && m.role === 'teacher')) {
+    throw forbidden('仅小组负责老师可执行此操作')
+  }
+}
+
+function groupMemberViews(db: DB, groupId: string) {
+  return db.groupMembers
+    .filter((m) => m.groupId === groupId)
+    .map((m) => {
+      const u = db.users.find((x) => x.id === m.userId)
+      return { id: m.id, groupId: m.groupId, userId: m.userId, role: m.role, name: u?.name ?? '', username: u?.username ?? '', joinedAt: m.joinedAt }
+    })
+    .sort((a, b) => (a.role === b.role ? a.joinedAt.localeCompare(b.joinedAt) : a.role === 'teacher' ? -1 : 1))
+}
+
+function groupView(db: DB, group: QuizGroup) {
+  return {
+    ...group,
+    memberCount: db.groupMembers.filter((m) => m.groupId === group.id).length,
+    questionCount: db.quizQuestions.filter((q) => q.groupId === group.id).length,
+    projectCount: db.projects.filter((p) => p.groupId === group.id).length,
+  }
+}
+
+function inviteView(db: DB, invite: GroupInviteRec) {
+  const user = db.users.find((u) => u.id === invite.userId)
+  return { ...invite, name: user?.name ?? '', username: user?.username ?? '' }
+}
+
+function validateQuestionBody(body: Record<string, any>) {
+  const question = String(body.question ?? '').trim()
+  if (!question) throw badRequest('题干不能为空')
+  if (!Array.isArray(body.options) || body.options.length < 2 || body.options.some((o: any) => !String(o ?? '').trim())) {
+    throw badRequest('选项至少 2 个且不能为空')
+  }
+  const answer = Number(body.answer)
+  if (!Number.isInteger(answer) || answer < 0 || answer >= body.options.length) throw badRequest('正确答案下标无效')
+  const difficulty = Number(body.difficulty)
+  if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 3) throw badRequest('难度必须是 1-3')
+  const category = String(body.category ?? '').trim() || '综合'
+  return {
+    question,
+    options: body.options.map((o: any) => String(o)),
+    answer,
+    difficulty,
+    category,
+    explanation: String(body.explanation ?? '').trim(),
   }
 }
 
@@ -207,6 +268,21 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
     },
   },
   {
+    method: 'POST',
+    pattern: /^\/api\/projects\/([^/]+)\/join$/,
+    handler: (ctx) => {
+      const project = getProject(ctx.db, ctx.params[0])
+      if (project.status !== 'active') throw new HttpError(409, 'PROJECT_NOT_ACTIVE', '项目已结题，无法加入')
+      if (ctx.db.members.some((m) => m.projectId === project.id && m.userId === ctx.user.id)) {
+        throw new HttpError(409, 'ALREADY_MEMBER', '你已在该项目中')
+      }
+      const count = ctx.db.members.filter((m) => m.projectId === project.id).length
+      if (count >= 4) throw new HttpError(409, 'TEAM_FULL', '队伍已满（最多 4 人）')
+      ctx.db.members.push({ id: genId('m'), projectId: project.id, userId: ctx.user.id, joinedAt: now() })
+      return { status: 201, body: projectView(ctx.db, project) }
+    },
+  },
+  {
     method: 'GET',
     pattern: /^\/api\/projects\/([^/]+)$/,
     handler: (ctx) => {
@@ -224,6 +300,9 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
       if (ctx.body.name !== undefined) {
         if (!ctx.body.name) throw badRequest('项目名称不能为空')
         project.name = ctx.body.name
+      }
+      if (ctx.body.description !== undefined) {
+        project.description = ctx.body.description
       }
       if (ctx.body.status === 'finished') {
         project.status = 'finished'
@@ -561,8 +640,10 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
     pattern: /^\/api\/teacher\/projects$/,
     handler: (ctx) => {
       if (rankOf(ctx.user) < 1) throw forbidden('仅教师及以上可访问')
-      const items = ctx.db.projects
-        .slice()
+      const groupId = ctx.query.get('group')
+      let projects = ctx.db.projects.slice()
+      if (groupId) projects = projects.filter((p) => p.groupId === groupId)
+      const items = projects
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
         .map((p) => projectView(ctx.db, p))
       return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
@@ -693,6 +774,8 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
       if (rankOf(target) >= rankOf(ctx.user)) throw forbidden('只能管理低于自己层级的账号')
       const uid = target.id
       ctx.db.members = ctx.db.members.filter((m) => m.userId !== uid)
+      ctx.db.groupMembers = ctx.db.groupMembers.filter((m) => m.userId !== uid)
+      ctx.db.groupInvites = ctx.db.groupInvites.filter((i) => i.userId !== uid && i.inviterId !== uid)
       ctx.db.focusSessions = ctx.db.focusSessions.filter((s) => s.userId !== uid)
       ctx.db.checkins = ctx.db.checkins.filter((c) => c.userId !== uid)
       ctx.db.feedbacks = ctx.db.feedbacks.filter((f) => f.userId !== uid)
@@ -701,6 +784,292 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
         if (t.assigneeId === uid) t.assigneeId = null
       }
       ctx.db.users = ctx.db.users.filter((u) => u.id !== uid)
+      return { status: 204 }
+    },
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/users$/,
+    handler: (ctx) => {
+      if (rankOf(ctx.user) < 1) throw forbidden('仅教师及以上可搜索用户')
+      const keyword = (ctx.query.get('keyword') || '').toLowerCase()
+      const items = keyword
+        ? ctx.db.users.filter((u) => u.username.toLowerCase().includes(keyword) || u.name.toLowerCase().includes(keyword)).slice(0, 20)
+        : []
+      return { status: 200, body: { items: items.map(userBrief), total: items.length, page: 1, pageSize: items.length } }
+    },
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/groups\/mine$/,
+    handler: (ctx) => {
+      const ids = ctx.db.groupMembers.filter((m) => m.userId === ctx.user.id).map((m) => m.groupId)
+      const items = ctx.db.quizGroups.filter((g) => ids.includes(g.id)).map((g) => groupView(ctx.db, g))
+      return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
+    },
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/groups\/invites$/,
+    handler: (ctx) => {
+      const items = ctx.db.groupInvites
+        .filter((i) => i.userId === ctx.user.id && i.status === 'pending')
+        .map((i) => {
+          const group = ctx.db.quizGroups.find((g) => g.id === i.groupId)
+          const inviter = ctx.db.users.find((u) => u.id === i.inviterId)
+          return {
+            id: i.id,
+            groupId: i.groupId,
+            status: i.status,
+            groupName: group?.name ?? '',
+            inviterName: inviter?.name ?? '',
+            createdAt: i.createdAt,
+          }
+        })
+      return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
+    },
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/groups\/invites\/([^/]+)\/respond$/,
+    handler: (ctx) => {
+      const invite = ctx.db.groupInvites.find((i) => i.id === ctx.params[0] && i.userId === ctx.user.id && i.status === 'pending')
+      if (!invite) throw notFound('邀请不存在或已处理')
+      const accept = ctx.body.accept === true
+      invite.status = accept ? 'accepted' : 'declined'
+      if (accept && !ctx.db.groupMembers.some((m) => m.groupId === invite.groupId && m.userId === ctx.user.id)) {
+        ctx.db.groupMembers.push({ id: genId('gm'), groupId: invite.groupId, userId: ctx.user.id, role: 'member', joinedAt: now() })
+      }
+      return { status: 200, body: { status: invite.status } }
+    },
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/groups\/join$/,
+    handler: (ctx) => {
+      if (rankOf(ctx.user) !== 0) throw forbidden('仅学生可通过邀请码加入分组')
+      const code = String(ctx.body.inviteCode || '').toLowerCase()
+      const group = ctx.db.quizGroups.find((g) => g.inviteCode.toLowerCase() === code)
+      if (!group) throw new HttpError(409, 'INVALID_INVITE', '邀请码无效')
+      if (ctx.db.groupMembers.some((m) => m.groupId === group.id && m.userId === ctx.user.id)) {
+        throw new HttpError(409, 'ALREADY_MEMBER', '你已在该小组中')
+      }
+      ctx.db.groupMembers.push({ id: genId('gm'), groupId: group.id, userId: ctx.user.id, role: 'member', joinedAt: now() })
+      group.updatedAt = now()
+      return { status: 201, body: groupView(ctx.db, group) }
+    },
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/groups$/,
+    handler: (ctx) => {
+      if (rankOf(ctx.user) < 1) throw forbidden('仅教师可访问')
+      const ids = ctx.db.groupMembers.filter((m) => m.userId === ctx.user.id && m.role === 'teacher').map((m) => m.groupId)
+      const items = ctx.db.quizGroups.filter((g) => ids.includes(g.id)).map((g) => groupView(ctx.db, g))
+      return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
+    },
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/groups$/,
+    handler: (ctx) => {
+      if (rankOf(ctx.user) < 1) throw forbidden('仅教师可创建用户组')
+      const name = String(ctx.body.name ?? '').trim()
+      if (!name) throw badRequest('小组名称不能为空')
+      const quizMode = ['group', 'fallback', 'mixed'].includes(ctx.body.quizMode) ? ctx.body.quizMode : 'group'
+      const group: QuizGroup = {
+        id: genId('g'),
+        name,
+        description: String(ctx.body.description ?? '').trim(),
+        quizMode,
+        inviteCode: `G${ctx.db.quizGroups.length + 1}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+        createdAt: now(),
+        updatedAt: now(),
+      }
+      ctx.db.quizGroups.push(group)
+      ctx.db.groupMembers.push({ id: genId('gm'), groupId: group.id, userId: ctx.user.id, role: 'teacher', joinedAt: now() })
+      return { status: 201, body: groupView(ctx.db, group) }
+    },
+  },
+  {
+    method: 'PATCH',
+    pattern: /^\/api\/groups\/([^/]+)$/,
+    handler: (ctx) => {
+      const group = getGroup(ctx.db, ctx.params[0])
+      requireGroupLead(ctx.db, group.id, ctx.user)
+      if (ctx.body.name !== undefined) {
+        if (!String(ctx.body.name).trim()) throw badRequest('小组名称不能为空')
+        group.name = String(ctx.body.name).trim()
+      }
+      if (ctx.body.description !== undefined) group.description = String(ctx.body.description).trim()
+      if (ctx.body.quizMode !== undefined) {
+        if (!['group', 'fallback', 'mixed'].includes(ctx.body.quizMode)) throw badRequest('无效的抽题机制')
+        group.quizMode = ctx.body.quizMode
+      }
+      group.updatedAt = now()
+      return { status: 200, body: groupView(ctx.db, group) }
+    },
+  },
+  {
+    method: 'DELETE',
+    pattern: /^\/api\/groups\/([^/]+)$/,
+    handler: (ctx) => {
+      const group = getGroup(ctx.db, ctx.params[0])
+      requireGroupLead(ctx.db, group.id, ctx.user)
+      ctx.db.quizGroups = ctx.db.quizGroups.filter((g) => g.id !== group.id)
+      ctx.db.groupMembers = ctx.db.groupMembers.filter((m) => m.groupId !== group.id)
+      ctx.db.groupInvites = ctx.db.groupInvites.filter((i) => i.groupId !== group.id)
+      ctx.db.quizQuestions = ctx.db.quizQuestions.filter((q) => q.groupId !== group.id)
+      for (const p of ctx.db.projects) {
+        if (p.groupId === group.id) p.groupId = null
+      }
+      return { status: 204 }
+    },
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/groups\/([^/]+)\/members$/,
+    handler: (ctx) => {
+      const group = getGroup(ctx.db, ctx.params[0])
+      requireGroupLead(ctx.db, group.id, ctx.user)
+      const items = groupMemberViews(ctx.db, group.id)
+      return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
+    },
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/groups\/([^/]+)\/members$/,
+    handler: (ctx) => {
+      const group = getGroup(ctx.db, ctx.params[0])
+      requireGroupLead(ctx.db, group.id, ctx.user)
+      const role = ctx.body.role === 'teacher' ? 'teacher' : 'member'
+      const target = ctx.db.users.find((u) => u.id === ctx.body.userId)
+      if (!target) throw notFound('用户不存在')
+      if (role === 'teacher' && rankOf(target) < 1) throw badRequest('负责老师必须是教师角色')
+      if (ctx.db.groupMembers.some((m) => m.groupId === group.id && m.userId === target.id)) {
+        throw new HttpError(409, 'ALREADY_MEMBER', '该用户已在小组中')
+      }
+      const member: GroupMemberRec = { id: genId('gm'), groupId: group.id, userId: target.id, role, joinedAt: now() }
+      ctx.db.groupMembers.push(member)
+      group.updatedAt = now()
+      return { status: 201, body: groupMemberViews(ctx.db, group.id).find((m) => m.id === member.id) }
+    },
+  },
+  {
+    method: 'DELETE',
+    pattern: /^\/api\/groups\/([^/]+)\/members\/([^/]+)$/,
+    handler: (ctx) => {
+      const group = getGroup(ctx.db, ctx.params[0])
+      requireGroupLead(ctx.db, group.id, ctx.user)
+      const member = ctx.db.groupMembers.find((m) => m.groupId === group.id && m.userId === ctx.params[1])
+      if (!member) throw notFound('成员不存在')
+      if (member.role === 'teacher' && ctx.db.groupMembers.filter((m) => m.groupId === group.id && m.role === 'teacher').length <= 1) {
+        throw badRequest('组内至少保留一名负责老师')
+      }
+      ctx.db.groupMembers = ctx.db.groupMembers.filter((m) => m.id !== member.id)
+      group.updatedAt = now()
+      return { status: 204 }
+    },
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/groups\/([^/]+)\/questions$/,
+    handler: (ctx) => {
+      const group = getGroup(ctx.db, ctx.params[0])
+      requireGroupLead(ctx.db, group.id, ctx.user)
+      const items = ctx.db.quizQuestions
+        .filter((q) => q.groupId === group.id)
+        .sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''))
+      return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
+    },
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/groups\/([^/]+)\/questions$/,
+    handler: (ctx) => {
+      const group = getGroup(ctx.db, ctx.params[0])
+      requireGroupLead(ctx.db, group.id, ctx.user)
+      const data = validateQuestionBody(ctx.body)
+      const question: QuizQuestionRec = {
+        id: genId('q'),
+        groupId: group.id,
+        createdBy: ctx.user.id,
+        createdAt: now(),
+        updatedAt: now(),
+        ...data,
+      }
+      ctx.db.quizQuestions.push(question)
+      group.updatedAt = now()
+      return { status: 201, body: question }
+    },
+  },
+  {
+    method: 'PATCH',
+    pattern: /^\/api\/groups\/([^/]+)\/questions\/([^/]+)$/,
+    handler: (ctx) => {
+      const group = getGroup(ctx.db, ctx.params[0])
+      requireGroupLead(ctx.db, group.id, ctx.user)
+      const question = ctx.db.quizQuestions.find((q) => q.id === ctx.params[1] && q.groupId === group.id)
+      if (!question) throw notFound('题目不存在')
+      const data = validateQuestionBody(ctx.body)
+      Object.assign(question, data, { updatedAt: now() })
+      group.updatedAt = now()
+      return { status: 200, body: question }
+    },
+  },
+  {
+    method: 'DELETE',
+    pattern: /^\/api\/groups\/([^/]+)\/questions\/([^/]+)$/,
+    handler: (ctx) => {
+      const group = getGroup(ctx.db, ctx.params[0])
+      requireGroupLead(ctx.db, group.id, ctx.user)
+      const question = ctx.db.quizQuestions.find((q) => q.id === ctx.params[1] && q.groupId === group.id)
+      if (!question) throw notFound('题目不存在')
+      ctx.db.quizQuestions = ctx.db.quizQuestions.filter((q) => q.id !== question.id)
+      group.updatedAt = now()
+      return { status: 204 }
+    },
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/groups\/([^/]+)\/invites$/,
+    handler: (ctx) => {
+      const group = getGroup(ctx.db, ctx.params[0])
+      requireGroupLead(ctx.db, group.id, ctx.user)
+      const items = ctx.db.groupInvites.filter((i) => i.groupId === group.id && i.status === 'pending').map((i) => inviteView(ctx.db, i))
+      return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
+    },
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/groups\/([^/]+)\/invites$/,
+    handler: (ctx) => {
+      const group = getGroup(ctx.db, ctx.params[0])
+      requireGroupLead(ctx.db, group.id, ctx.user)
+      const target = ctx.db.users.find((u) => u.id === ctx.body.userId)
+      if (!target) throw notFound('用户不存在')
+      if (rankOf(target) !== 0) throw badRequest('只能邀请学生')
+      if (ctx.db.groupMembers.some((m) => m.groupId === group.id && m.userId === target.id)) {
+        throw new HttpError(409, 'ALREADY_MEMBER', '该学生已在小组中')
+      }
+      if (ctx.db.groupInvites.some((i) => i.groupId === group.id && i.userId === target.id && i.status === 'pending')) {
+        throw new HttpError(409, 'ALREADY_INVITED', '已有待处理的邀请')
+      }
+      const invite: GroupInviteRec = { id: genId('gi'), groupId: group.id, userId: target.id, inviterId: ctx.user.id, status: 'pending', createdAt: now() }
+      ctx.db.groupInvites.push(invite)
+      return { status: 201, body: inviteView(ctx.db, invite) }
+    },
+  },
+  {
+    method: 'DELETE',
+    pattern: /^\/api\/groups\/([^/]+)\/invites\/([^/]+)$/,
+    handler: (ctx) => {
+      const group = getGroup(ctx.db, ctx.params[0])
+      requireGroupLead(ctx.db, group.id, ctx.user)
+      const invite = ctx.db.groupInvites.find((i) => i.id === ctx.params[1] && i.groupId === group.id)
+      if (!invite) throw notFound('邀请不存在')
+      if (invite.status !== 'pending') throw badRequest('仅待处理的邀请可撤回')
+      ctx.db.groupInvites = ctx.db.groupInvites.filter((i) => i.id !== invite.id)
       return { status: 204 }
     },
   },
