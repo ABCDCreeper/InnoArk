@@ -647,6 +647,33 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
   },
   {
     method: 'GET',
+    pattern: /^\/api\/teacher\/activity$/,
+    handler: (ctx) => {
+      if (rankOf(ctx.user) < 1) throw forbidden('仅教师及以上可访问')
+      const nameOf = (uid: string) => {
+        const u = ctx.db.users.find((x) => x.id === uid)
+        return { name: u?.name ?? '', username: u?.username ?? '' }
+      }
+      const quiz = ctx.db.quizAttempts.map((a) => ({
+        type: 'quiz',
+        ...nameOf(a.userId),
+        text: `闯关获得 ${a.score}/${a.total}`,
+        createdAt: a.createdAt,
+      }))
+      const focus = ctx.db.focusSessions
+        .filter((s) => s.type === 'focus')
+        .map((s) => ({
+          type: 'focus',
+          ...nameOf(s.userId),
+          text: `完成 ${s.durationMin} 分钟专注`,
+          createdAt: s.createdAt,
+        }))
+      const items = [...quiz, ...focus].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 20)
+      return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
+    },
+  },
+  {
+    method: 'GET',
     pattern: /^\/api\/teacher\/projects$/,
     handler: (ctx) => {
       if (rankOf(ctx.user) < 1) throw forbidden('仅教师及以上可访问')

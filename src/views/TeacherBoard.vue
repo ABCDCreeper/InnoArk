@@ -6,7 +6,8 @@ import {
   NRadioGroup, NRadioButton,
 } from 'naive-ui'
 import { ChevronForwardOutline } from '@vicons/ionicons5'
-import { fetchTeacherProjects } from '../api/teacher'
+import { fetchTeacherProjects, fetchTeacherActivity } from '../api/teacher'
+import type { TeacherActivity } from '../api/teacher'
 import { fetchGroups } from '../api/group'
 import type { Project } from '../api/types'
 import type { QuizGroup } from '../api/types'
@@ -14,6 +15,7 @@ import type { QuizGroup } from '../api/types'
 const router = useRouter()
 const projects = ref<Project[]>([])
 const groups = ref<QuizGroup[]>([])
+const activities = ref<TeacherActivity[]>([])
 const filter = ref('')
 const loading = ref(true)
 
@@ -24,10 +26,24 @@ async function load() {
     groups.value = g.items
     const res = await fetchTeacherProjects(filter.value || undefined)
     projects.value = res.items
+    const act = await fetchTeacherActivity()
+    activities.value = act.items
   } finally {
     loading.value = false
   }
 }
+
+function relativeTime(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const minutes = Math.floor(diff / 60000)
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes} 分钟前`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} 小时前`
+  return `${Math.floor(hours / 24)} 天前`
+}
+
+const ACTIVITY_EMOJI: Record<string, string> = { quiz: '⚔️', focus: '🍅' }
 
 function changeFilter(v: string) {
   filter.value = v
@@ -45,6 +61,7 @@ function formatTime(iso: string) {
 const activeCount = () => projects.value.filter((p) => p.status === 'active').length
 
 const AVATAR_COLORS = ['#18a058', '#2080f0', '#f0a020', '#e88080', '#8a7ff0', '#0f9f9f', '#d03050']
+
 function avatarColor(name: string) {
   let h = 0
   for (const ch of name) h = (h * 31 + (ch.codePointAt(0) ?? 0)) % 997
@@ -72,6 +89,16 @@ function avatarColor(name: string) {
     </n-card>
 
     <n-empty v-if="!loading && projects.length === 0" description="暂无项目" />
+
+    <n-card size="small" title="📡 最近动态">
+      <n-empty v-if="activities.length === 0" description="最近还没有学生动态" style="padding: 16px 0;" />
+      <div v-for="(a, i) in activities" :key="i" class="activity-row">
+        <span class="activity-emoji">{{ ACTIVITY_EMOJI[a.type] ?? '✨' }}</span>
+        <span class="activity-name">{{ a.name }}</span>
+        <span class="activity-text">{{ a.text }}</span>
+        <span class="activity-time">{{ relativeTime(a.createdAt) }}</span>
+      </div>
+    </n-card>
 
     <n-grid :cols="3" :x-gap="16" :y-gap="16" responsive="screen" item-responsive>
       <n-grid-item v-for="p in projects" :key="p.id" span="3 m:1">
@@ -108,3 +135,37 @@ function avatarColor(name: string) {
     </n-grid>
   </n-space>
 </template>
+
+<style scoped>
+.activity-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.activity-row:hover {
+  background: rgba(128, 128, 128, 0.08);
+}
+
+.activity-emoji {
+  font-size: 15px;
+}
+
+.activity-name {
+  font-weight: 700;
+}
+
+.activity-text {
+  flex: 1;
+  opacity: 0.85;
+}
+
+.activity-time {
+  font-size: 12px;
+  opacity: 0.55;
+  white-space: nowrap;
+}
+</style>
