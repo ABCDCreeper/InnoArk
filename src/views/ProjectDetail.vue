@@ -44,19 +44,23 @@ watch(() => props.id, load)
 const isTeacher = computed(() => auth.isTeacher)
 const editable = computed(() => {
   if (!project.value) return false
-  return !isTeacher.value && project.value.status === 'active'
+  const isMember = project.value.members.some((m) => m.id === auth.user?.id)
+  return !isTeacher.value && isMember && project.value.status === 'active'
 })
 
 const AVATAR_COLORS = ['#18a058', '#2080f0', '#d03050', '#f0a020']
 
-const tabKey = ref(route.query.tab as string || 'nebula')
+const firstQuery = <T,>(v: T | T[] | undefined): T | undefined => (Array.isArray(v) ? v[0] : v)
+
+const tabKey = ref(firstQuery(route.query.tab) as string || 'nebula')
 
 function onTabChange(key: string) {
   tabKey.value = key
 }
 
 watch(() => route.query.tab, (val) => {
-  if (val && val !== tabKey.value) tabKey.value = val as string
+  const v = firstQuery(val)
+  if (v && v !== tabKey.value) tabKey.value = v as string
 })
 
 const tabs = computed(() => {
@@ -162,7 +166,6 @@ async function copyInvite() {
               v-else-if="t.key === 'archive'"
               :project-id="project.id"
               :editable="editable"
-              :project-name="project.name"
             />
             </n-tab-pane>
           </n-tabs>

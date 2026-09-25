@@ -22,6 +22,7 @@ const routes = [
       { path: 'project/:id', name: 'ProjectDetail', component: () => import('../views/ProjectDetail.vue'), props: true },
       { path: 'resources', name: 'Resources', component: () => import('../views/Resources.vue') },
       { path: 'quiz', name: 'Quiz', component: () => import('../views/Quiz.vue') },
+      { path: 'leaderboard', name: 'Leaderboard', component: () => import('../views/Leaderboard.vue') },
       { path: 'battle', name: 'Battle', component: () => import('../views/Battle.vue') },
       { path: 'learn', name: 'Learn', component: () => import('../views/Learn.vue') },
       { path: 'profile', name: 'Profile', component: () => import('../views/Profile.vue') },

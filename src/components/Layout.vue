@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, h, ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, h, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import type { Component } from 'vue'
 import {
   NLayout, NLayoutHeader, NLayoutSider, NLayoutContent, NLayoutFooter,
   NMenu, NText, NIcon, NButton, NTag, NAvatar, NSpace, NPopover, NDrawer, NDrawerContent, NBadge,
+  NModal, NInput,
 } from 'naive-ui'
 import {
   HomeOutline as HomeIcon,
@@ -22,17 +23,45 @@ import {
   BulbOutline as LearnIcon,
   StatsChartOutline as StatsIcon,
   NotificationsOutline as BellIcon,
+  MedalOutline as MedalIcon,
 } from '@vicons/ionicons5'
 
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useMessage } from 'naive-ui'
 import { useAuthStore } from '../stores/auth'
 import { useNotifyStore } from '../stores/notify'
+import { usePomodoroStore } from '../stores/pomodoro'
+import { useGrowthStore } from '../stores/growth'
+import { createFocusSession } from '../api/focus'
+import { fetchProjects } from '../api/project'
+import { fetchResources } from '../api/resource'
+import type { Project, Resource } from '../api/types'
 import FloatingPomodoro from './FloatingPomodoro.vue'
+import AiAssistant from './AiAssistant.vue'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const notify = useNotifyStore()
+const message = useMessage()
+
+// 番茄钟是全局组件，完成事件必须在这里消费（而不是只在 Focus 页），
+// 否则用户切走页面后完成的专注记录会被静默丢弃。
+const pomodoro = usePomodoroStore()
+const growth = useGrowthStore()
+
+watch(() => pomodoro.sessionCompleted, (completed) => {
+  if (!completed) return
+  createFocusSession(completed.minutes, completed.mode)
+    .then(() => {
+      message.success(completed.mode === 'focus' ? '完成一个番茄钟，休息一下吧！' : '休息结束，继续加油！')
+      growth.refreshTasks()
+    })
+    .catch(() => message.error('专注记录上传失败'))
+    .finally(() => {
+      pomodoro.sessionCompleted = null
+    })
+}, { immediate: true })
 
 function formatTime(iso: string) {
   const d = new Date(iso)
@@ -52,6 +81,7 @@ const studentMenu: MenuDef[] = [
   { key: '/projects', title: '项目', icon: RocketIcon },
   { key: '/resources', title: '资源库', icon: CompassIcon },
   { key: '/quiz', title: '闯关', icon: TrophyIcon },
+  { key: '/leaderboard', title: '排行榜', icon: MedalIcon },
   { key: '/learn', title: '学习天地', icon: LearnIcon },
   { key: '/profile', title: '成长档案', icon: StatsIcon },
   { key: '/my-groups', title: '我的分组', icon: PeopleIcon },
@@ -64,6 +94,7 @@ const teacherMenu: MenuDef[] = [
   { key: '/', title: '首页', icon: HomeIcon },
   { key: '/teacher', title: '团队总览', icon: SchoolIcon },
   { key: '/groups', title: '题库管理', icon: AlbumsIcon },
+  { key: '/leaderboard', title: '排行榜', icon: MedalIcon },
   { key: '/learn', title: '学习天地', icon: LearnIcon },
   { key: '/profile', title: '成长档案', icon: StatsIcon },
   { key: '/projects', title: '项目', icon: RocketIcon },
@@ -75,6 +106,7 @@ const managerMenu: MenuDef[] = [
   { key: '/', title: '首页', icon: HomeIcon },
   { key: '/admin/users', title: '用户管理', icon: PeopleIcon },
   { key: '/groups', title: '题库管理', icon: AlbumsIcon },
+  { key: '/leaderboard', title: '排行榜', icon: MedalIcon },
   { key: '/learn', title: '学习天地', icon: LearnIcon },
   { key: '/profile', title: '成长档案', icon: StatsIcon },
   { key: '/teacher', title: '团队总览', icon: SchoolIcon },
@@ -122,6 +154,68 @@ const isMobile = ref(false)
 const mobileMenuOpen = ref(false)
 const siderCollapsed = ref(false)
 
+// —— Ctrl+K 全局命令面板 ——
+const showCmd = ref(false)
+const cmdQuery = ref('')
+const cmdProjects = ref<Project[]>([])
+const cmdResources = ref<Resource[]>([])
+
+const allPages = computed(() => {
+  const seen = new Set<string>()
+  return [...studentMenu, ...teacherMenu, ...managerMenu].filter((d) => (seen.has(d.key) ? false : (seen.add(d.key), true)))
+})
+
+const cmdPages = computed(() => {
+  const q = cmdQuery.value.trim().toLowerCase()
+  if (!q) return allPages.value.slice(0, 8)
+  return allPages.value.filter((d) => d.title.toLowerCase().includes(q) || d.key.toLowerCase().includes(q))
+})
+
+const cmdProjectHits = computed(() => {
+  const q = cmdQuery.value.trim().toLowerCase()
+  if (!q) return []
+  return cmdProjects.value.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 5)
+})
+
+function openCmd() {
+  showCmd.value = true
+  if (cmdProjects.value.length === 0) {
+    fetchProjects().then((r) => { cmdProjects.value = r.items }).catch(() => { /* 面板里项目组直接为空 */ })
+  }
+}
+
+function goCmd(to: string) {
+  showCmd.value = false
+  cmdQuery.value = ''
+  router.push(to)
+}
+
+function onCmdEnter() {
+  if (cmdPages.value[0]) goCmd(cmdPages.value[0].key)
+  else if (cmdProjectHits.value[0]) goCmd(`/project/${cmdProjectHits.value[0].id}`)
+  else goCmd('/resources')
+}
+
+function onCmdKeydown(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    openCmd()
+  }
+}
+
+let cmdDebounce: number | null = null
+watch(cmdQuery, (q) => {
+  if (cmdDebounce !== null) clearTimeout(cmdDebounce)
+  cmdDebounce = window.setTimeout(() => {
+    const kw = q.trim()
+    if (!kw) {
+      cmdResources.value = []
+      return
+    }
+    fetchResources({ keyword: kw }).then((r) => { cmdResources.value = r.items }).catch(() => { cmdResources.value = [] })
+  }, 250)
+})
+
 function updateViewport() {
   isMobile.value = window.innerWidth < 768
 }
@@ -130,8 +224,13 @@ function onResize() { updateViewport() }
 onMounted(() => {
   updateViewport()
   window.addEventListener('resize', onResize)
+  window.addEventListener('keydown', onCmdKeydown)
 })
-onBeforeUnmount(() => window.removeEventListener('resize', onResize))
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', onResize)
+  window.removeEventListener('keydown', onCmdKeydown)
+  if (cmdDebounce !== null) clearTimeout(cmdDebounce)
+})
 </script>
 
 <template>
@@ -215,6 +314,39 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
   </n-drawer>
 
   <floating-pomodoro />
+  <ai-assistant />
+
+  <!-- Ctrl+K 快速跳转 -->
+  <n-modal v-model:show="showCmd" preset="card" title="快速跳转" style="width: 520px; max-width: 92vw;">
+    <template #header-extra>
+      <n-text depth="3" style="font-size: 12px;">Ctrl + K · Enter 打开第一项</n-text>
+    </template>
+    <n-input v-model:value="cmdQuery" size="large" placeholder="搜索页面 / 项目 / 资源…" @keydown.enter.prevent="onCmdEnter" />
+    <div class="cmd-list">
+      <template v-if="cmdPages.length">
+        <div class="cmd-group">页面</div>
+        <div v-for="p in cmdPages" :key="`pg${p.key}`" class="cmd-item" @click="goCmd(p.key)">
+          <n-icon size="16"><component :is="p.icon" /></n-icon>
+          <span>{{ p.title }}</span>
+        </div>
+      </template>
+      <template v-if="cmdProjectHits.length">
+        <div class="cmd-group">项目</div>
+        <div v-for="pr in cmdProjectHits" :key="pr.id" class="cmd-item" @click="goCmd(`/project/${pr.id}`)">
+          <span>🚀</span><span>{{ pr.name }}</span>
+        </div>
+      </template>
+      <template v-if="cmdResources.length">
+        <div class="cmd-group">资源库</div>
+        <div v-for="r in cmdResources.slice(0, 5)" :key="r.id" class="cmd-item" @click="goCmd('/resources')">
+          <span>🔗</span><span>{{ r.title }}</span>
+        </div>
+      </template>
+      <div v-if="!cmdPages.length && !cmdProjectHits.length && !cmdResources.length" class="cmd-empty">
+        没有匹配结果，试试「项目」「资源」或页面名
+      </div>
+    </div>
+  </n-modal>
 </template>
 
 <style>
@@ -331,6 +463,40 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
   .logo-text {
     font-size: 22px;
   }
+}
+
+.cmd-list {
+  margin-top: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.cmd-group {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.5;
+  padding: 8px 6px 4px;
+}
+
+.cmd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.cmd-item:hover {
+  background: rgba(128, 128, 128, 0.12);
+}
+
+.cmd-empty {
+  padding: 24px 0;
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.6;
 }
 
 @media (max-width: 768px) {

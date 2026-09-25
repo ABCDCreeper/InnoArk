@@ -43,6 +43,20 @@ const xpPct = computed(() => {
 
 const totalCards = CARD_SETS.reduce((sum, s) => sum + cardsOfSet(s.id).length, 0)
 
+// —— 本周学习周报：汇总专注 / 闯关 / 签到 ——
+const weekReport = computed(() => {
+  const weekAgo = Date.now() - 7 * 86400000
+  const recentQuiz = (quizStats.value?.recent ?? []).filter((a) => new Date(a.createdAt).getTime() >= weekAgo)
+  const quizBest = recentQuiz.reduce((m, a) => Math.max(m, a.score), 0)
+  const signDays = growth.monthSigns.filter((d) => new Date(d + 'T12:00:00').getTime() >= weekAgo).length
+  const focusMinutes = focusStats.value?.week.reduce((s, d) => s + d.minutes, 0) ?? 0
+  const parts: string[] = []
+  parts.push(focusMinutes >= 125 ? '专注习惯非常扎实' : focusMinutes >= 50 ? '专注节奏保持得不错' : '本周专注还可以加把劲')
+  if (recentQuiz.length > 0) parts.push(`闯关 ${recentQuiz.length} 次、最佳 ${quizBest} 分`)
+  if (signDays >= 6) parts.push('签到近乎全勤')
+  return { quizCount: recentQuiz.length, quizBest, signDays, focusMinutes, summary: parts.join('，') + '。' }
+})
+
 const AVATARS = ['🐣', '🌱', '🧭', '⚡', '🛠️', '🌟', '🏆', '🚀']
 const avatar = computed(() => AVATARS[Math.min(learn.level, AVATARS.length) - 1])
 
@@ -171,6 +185,24 @@ function generateCard() {
     <n-card size="small" title="📈 本周专注趋势">
       <WeeklyBar v-if="focusStats" :data="focusStats.week" />
       <n-text v-else depth="3" style="font-size: 13px;">加载中…</n-text>
+    </n-card>
+
+    <n-card size="small" title="🗓️ 本周学习周报">
+      <template #header-extra>
+        <n-text depth="3" style="font-size: 12px;">近 7 天汇总</n-text>
+      </template>
+      <n-grid :cols="3" :x-gap="12" responsive="screen" item-responsive>
+        <n-grid-item span="3 m:1">
+          <div class="report-item"><span class="report-num">🍅 {{ weekReport.focusMinutes }}</span><n-text depth="3" style="font-size: 12px;">专注分钟</n-text></div>
+        </n-grid-item>
+        <n-grid-item span="3 m:1">
+          <div class="report-item"><span class="report-num">⚔️ {{ weekReport.quizCount }}</span><n-text depth="3" style="font-size: 12px;">闯关次数{{ weekReport.quizCount > 0 ? ` · 最佳 ${weekReport.quizBest} 分` : '' }}</n-text></div>
+        </n-grid-item>
+        <n-grid-item span="3 m:1">
+          <div class="report-item"><span class="report-num">📅 {{ weekReport.signDays }}/7</span><n-text depth="3" style="font-size: 12px;">签到天数</n-text></div>
+        </n-grid-item>
+      </n-grid>
+      <n-text style="font-size: 13px; display: block; margin-top: 10px;">🤖 小智点评：{{ weekReport.summary }}</n-text>
     </n-card>
 
     <n-card size="small" title="🃏 图鉴收集进度">
@@ -348,6 +380,20 @@ function generateCard() {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.report-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+  padding: 6px 0;
+}
+
+.report-num {
+  font-size: 24px;
+  font-weight: 800;
 }
 
 .share-title {
