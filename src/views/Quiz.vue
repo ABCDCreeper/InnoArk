@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { NCard, NButton, NSpace, NText, NProgress, NTag, NStatistic, NIcon, NEmpty, NDivider, NDrawer, NDrawerContent, useMessage } from 'naive-ui'
+import { useRouter } from 'vue-router'
 import { PlayOutline, RefreshOutline } from '@vicons/ionicons5'
 import { fetchQuizQuestions, fetchQuizStats, submitQuizAttempt } from '../api/quiz'
 import { fetchMyGroups } from '../api/group'
@@ -14,6 +15,7 @@ import type { QuizQuestion, QuizStats } from '../api/types'
 const message = useMessage()
 const growth = useGrowthStore()
 const notify = useNotifyStore()
+const router = useRouter()
 
 type Phase = 'start' | 'playing' | 'result'
 
@@ -260,6 +262,9 @@ function retryWrong(w: WrongItem, i: number) {
         <div class="start-actions" style="margin-bottom: 12px;">
           <n-button quaternary size="small" @click="wrongOpen = true">
             📝 错题本（{{ growth.wrongBook.length }}）
+          </n-button>
+          <n-button quaternary size="small" @click="router.push('/battle')">
+            ⚔️ 极速对战（{{ growth.battleWins }} 胜 / {{ growth.battleTotal }} 场）
           </n-button>
         </div>
 

@@ -139,6 +139,7 @@ function generateCard() {
           <div class="stat-num">{{ quizStats?.attempts ?? 0 }}</div>
           <n-text depth="3" style="font-size: 12px;">闯关次数</n-text>
           <n-text depth="3" style="font-size: 12px;">最佳 {{ quizStats?.best ? `${quizStats.best.score}/${quizStats.best.total}` : '—' }}</n-text>
+          <n-text depth="3" style="font-size: 12px;">⚔️ 对战 {{ growth.battleWins }} 胜 / {{ growth.battleTotal }} 场</n-text>
         </n-card>
       </n-grid-item>
       <n-grid-item span="2 m:1">

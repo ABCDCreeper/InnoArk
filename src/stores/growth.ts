@@ -19,6 +19,8 @@ interface GrowthSave {
   dailyStreak: number
   dailyLastDate: string
   claimed: Record<string, string[]>
+  battleWins: number
+  battleTotal: number
 }
 
 const emptySave = (): GrowthSave => ({
@@ -30,6 +32,8 @@ const emptySave = (): GrowthSave => ({
   dailyStreak: 0,
   dailyLastDate: '',
   claimed: {},
+  battleWins: 0,
+  battleTotal: 0,
 })
 
 function dateKey(offsetDays = 0) {
@@ -271,5 +275,25 @@ export const useGrowthStore = defineStore('growth', () => {
     return { xpGained, ...res }
   }
 
-  return { signedToday, signDays, signStreak, monthSigns, tasks, wrongBook, collection, signIn, refreshTasks, markQuizPlayed, grantLessonDrop, grantQuizDrop, setComplete, setOwnedCount, recordWrong, removeWrong, clearWrong, dailyQuestion, dailyResult, initDailyQuestion, answerDaily }
+  function recordBattle(win: boolean) {
+    load()
+    save.value.battleTotal += 1
+    if (win) save.value.battleWins += 1
+    const xpGained = win ? 30 : 10
+    const res = learn.addXp(xpGained)
+    notify.push(win ? '⚔️ 对战胜利，+30 XP' : '⚔️ 对战惜败，+10 XP', '/battle')
+    persist()
+    return { xpGained, ...res }
+  }
+
+  const battleWins = computed(() => {
+    load()
+    return save.value.battleWins
+  })
+  const battleTotal = computed(() => {
+    load()
+    return save.value.battleTotal
+  })
+
+  return { signedToday, signDays, signStreak, monthSigns, tasks, wrongBook, collection, signIn, refreshTasks, markQuizPlayed, grantLessonDrop, grantQuizDrop, setComplete, setOwnedCount, recordWrong, removeWrong, clearWrong, dailyQuestion, dailyResult, initDailyQuestion, answerDaily, recordBattle, battleWins, battleTotal }
 })
