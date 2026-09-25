@@ -3,7 +3,7 @@ import { computed, h, ref, onMounted, onBeforeUnmount } from 'vue'
 import type { Component } from 'vue'
 import {
   NLayout, NLayoutHeader, NLayoutSider, NLayoutContent, NLayoutFooter,
-  NMenu, NText, NIcon, NButton, NTag, NAvatar, NSpace, NPopover, NDrawer, NDrawerContent,
+  NMenu, NText, NIcon, NButton, NTag, NAvatar, NSpace, NPopover, NDrawer, NDrawerContent, NBadge,
 } from 'naive-ui'
 import {
   HomeOutline as HomeIcon,
@@ -21,15 +21,29 @@ import {
   PeopleOutline as PeopleIcon,
   BulbOutline as LearnIcon,
   StatsChartOutline as StatsIcon,
+  NotificationsOutline as BellIcon,
 } from '@vicons/ionicons5'
 
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useNotifyStore } from '../stores/notify'
 import FloatingPomodoro from './FloatingPomodoro.vue'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const notify = useNotifyStore()
+
+function formatTime(iso: string) {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function openNotify(item: { id: string; to?: string }) {
+  notify.markRead(item.id)
+  if (item.to) router.push(item.to)
+}
 
 interface MenuDef { key: string; title: string; icon: Component }
 
@@ -131,6 +145,33 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
       </div>
 
       <div class="header-user-area">
+        <n-popover trigger="click" :width="330">
+          <template #trigger>
+            <n-badge :value="notify.unread" :max="99">
+              <n-button quaternary circle size="small" aria-label="消息中心">
+                <template #icon><n-icon size="20"><bell-icon /></n-icon></template>
+              </n-button>
+            </n-badge>
+          </template>
+          <div class="notify-head">
+            <span class="notify-title">🔔 消息中心</span>
+            <n-button quaternary size="tiny" :disabled="notify.unread === 0" @click="notify.markAllRead()">
+              全部已读
+            </n-button>
+          </div>
+          <div v-if="notify.items.length === 0" class="notify-empty">暂无消息，去学习赚点高光时刻吧！</div>
+          <div
+            v-for="item in notify.items"
+            :key="item.id"
+            class="notify-item"
+            :class="{ unread: !item.read }"
+            @click="openNotify(item)"
+          >
+            <span class="notify-text">{{ item.text }}</span>
+            <span class="notify-time">{{ formatTime(item.time) }}</span>
+          </div>
+        </n-popover>
+
         <n-popover trigger="click">
           <template #trigger>
             <div class="user-trigger">
@@ -177,6 +218,58 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 </template>
 
 <style>
+.notify-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 8px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+  margin-bottom: 6px;
+}
+
+.notify-title {
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.notify-empty {
+  padding: 18px 0;
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+.notify-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.notify-item:hover {
+  background: rgba(128, 128, 128, 0.1);
+}
+
+.notify-item.unread .notify-text {
+  font-weight: 700;
+}
+
+.notify-item.unread::before {
+  content: '';
+}
+
+.notify-text {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.notify-time {
+  font-size: 11px;
+  opacity: 0.55;
+}
+
 .app-header {
   height: 64px;
   padding: 0 12px;

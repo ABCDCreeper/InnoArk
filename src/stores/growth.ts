@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { useAuthStore } from './auth'
 import { useLearnStore } from './learn'
+import { useNotifyStore } from './notify'
 import { fetchFocusStats } from '../api/focus'
 import { COURSES } from '../data/courses'
 import { CARDS, cardsOfSet, pickOne } from '../data/collection'
@@ -49,6 +50,7 @@ export const TASK_DEFS = [
 export const useGrowthStore = defineStore('growth', () => {
   const auth = useAuthStore()
   const learn = useLearnStore()
+  const notify = useNotifyStore()
   const save = ref<GrowthSave>(emptySave())
   let loadedUser: string | null = null
   const focusMinutesToday = ref(0)
@@ -112,6 +114,7 @@ export const useGrowthStore = defineStore('growth', () => {
     const streak = currentStreak()
     const xpGained = [5, 10, 15, 20][Math.min(streak - 1, 3)]
     const res = learn.addXp(xpGained)
+    notify.push(`📅 签到成功，+${xpGained} XP`, '/learn')
     persist()
     grantTaskXp()
     return { xpGained, streak, ...res }
@@ -137,6 +140,7 @@ export const useGrowthStore = defineStore('growth', () => {
     let gained = fresh.length * 10
     if (save.value.claimed[today].length === TASK_DEFS.length && claimed.length < TASK_DEFS.length) gained += 5
     learn.addXp(gained)
+    notify.push(`🎯 每日任务完成，+${gained} XP`, '/learn')
     persist()
     return gained
   }
@@ -262,6 +266,7 @@ export const useGrowthStore = defineStore('growth', () => {
     save.value.dailyLastDate = today
     const xpGained = 5 + 2 * Math.min(Math.max(save.value.dailyStreak - 1, 0), 5)
     const res = learn.addXp(xpGained)
+    notify.push(`🌟 每日一题答对，+${xpGained} XP`, '/quiz')
     persist()
     return { xpGained, ...res }
   }

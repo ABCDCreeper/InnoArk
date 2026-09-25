@@ -7,6 +7,7 @@ import type { LearnCourse } from '../../data/courses'
 import type { CollectionCard } from '../../data/collection'
 import { useLearnStore } from '../../stores/learn'
 import { useGrowthStore } from '../../stores/growth'
+import { useNotifyStore } from '../../stores/notify'
 import type { LessonResult } from '../../stores/learn'
 
 const props = defineProps<{ course: LearnCourse; lessonIndex: number }>()
@@ -14,6 +15,7 @@ const emit = defineEmits<{ exit: []; next: [] }>()
 
 const learn = useLearnStore()
 const growth = useGrowthStore()
+const notify = useNotifyStore()
 
 type Phase = 'video' | 'quiz' | 'result'
 
@@ -82,6 +84,8 @@ function pick(i: number) {
 function submit() {
   result.value = learn.finishLesson(props.course, props.lessonIndex, correctCount.value, total.value)
   cardDrop.value = result.value.passed ? growth.grantLessonDrop(props.course.id) : null
+  result.value.newBadges.forEach((b) => notify.push(`🎖️ 解锁徽章「${b.name}」`, '/profile'))
+  if (cardDrop.value) notify.push(`🃏 获得新卡片「${cardDrop.value.name}」`, '/learn')
   phase.value = 'result'
   if (result.value.leveledUp) celebrating.value = true
 }

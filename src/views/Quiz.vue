@@ -6,12 +6,14 @@ import { fetchQuizQuestions, fetchQuizStats, submitQuizAttempt } from '../api/qu
 import { fetchMyGroups } from '../api/group'
 import { ApiError } from '../api/request'
 import { useGrowthStore } from '../stores/growth'
+import { useNotifyStore } from '../stores/notify'
 import type { WrongItem } from '../stores/growth'
 import type { CollectionCard } from '../data/collection'
 import type { QuizQuestion, QuizStats } from '../api/types'
 
 const message = useMessage()
 const growth = useGrowthStore()
+const notify = useNotifyStore()
 
 type Phase = 'start' | 'playing' | 'result'
 
@@ -160,6 +162,7 @@ async function finish() {
     stats.value = await fetchQuizStats()
     growth.markQuizPlayed()
     quizDrop.value = growth.grantQuizDrop(Math.floor(finalScore / 10))
+    if (quizDrop.value) notify.push(`🃏 获得新卡片「${quizDrop.value.name}」`, '/learn')
   } catch {
     message.error('成绩同步失败，但你的分数还在！')
   }
