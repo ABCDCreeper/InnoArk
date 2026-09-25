@@ -143,7 +143,7 @@ const memberRole = ref<'member' | 'teacher'>('member')
 const memberKeyword = ref('')
 const memberResults = ref<UserBrief[]>([])
 const memberSearching = ref(false)
-const memberAdding = ref(false)
+const memberAddingId = ref<string | null>(null)
 
 const memberIds = computed(() => new Set(members.value.map((m) => m.userId)))
 
@@ -168,7 +168,7 @@ function openMemberModal() {
 
 async function addMember(u: UserBrief) {
   if (!selectedId.value) return
-  memberAdding.value = true
+  memberAddingId.value = u.id
   try {
     if (memberRole.value === 'member') {
       await sendGroupInvite(selectedId.value, u.id)
@@ -182,7 +182,7 @@ async function addMember(u: UserBrief) {
   } catch (err) {
     message.error(err instanceof ApiError ? err.message : '操作失败')
   } finally {
-    memberAdding.value = false
+    memberAddingId.value = null
   }
 }
 
@@ -518,7 +518,7 @@ function removeQuestion(q: QuizQuestion) {
               <n-text strong style="font-size: 13px;">{{ u.name }}</n-text>
               <n-text depth="3" style="font-size: 12px;">@{{ u.username }} · {{ u.role === 'teacher' ? '老师' : '学生' }}</n-text>
             </div>
-            <n-button size="tiny" type="primary" ghost :disabled="memberIds.has(u.id)" :loading="memberAdding" @click="addMember(u)">
+            <n-button size="tiny" type="primary" ghost :disabled="memberIds.has(u.id)" :loading="memberAddingId === u.id" @click="addMember(u)">
               {{ memberIds.has(u.id) ? '已在组内' : memberRole === 'member' ? '发送邀请' : '添加' }}
             </n-button>
           </div>

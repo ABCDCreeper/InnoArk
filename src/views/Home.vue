@@ -53,6 +53,8 @@ onMounted(async () => {
     const [proj, focus] = await Promise.all([fetchProjects(), fetchFocusStats(7)])
     projects.value = proj.items
     stats.value = focus
+  } catch (err) {
+    message.error(err instanceof ApiError ? err.message : '首页数据加载失败')
   } finally {
     loading.value = false
   }

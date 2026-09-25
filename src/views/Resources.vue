@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import {
-  NCard, NGrid, NGridItem, NButton, NTag, NSpace, NText, NInput, NEmpty, NIcon, NSpin,
+  NCard, NGrid, NGridItem, NButton, NTag, NSpace, NText, NInput, NEmpty, NIcon, NSpin, useMessage,
 } from 'naive-ui'
 import { OpenOutline, SearchOutline } from '@vicons/ionicons5'
 import { fetchResources } from '../api/resource'
+import { ApiError } from '../api/request'
 import type { Resource } from '../api/types'
 
+const message = useMessage()
 const categories = ['全部', '物理', '工程', '编程', '艺术', '生物', '综合']
 const category = ref('全部')
 const keyword = ref('')
@@ -21,6 +23,8 @@ async function load() {
       keyword: keyword.value.trim() || undefined,
     })
     resources.value = res.items
+  } catch (err) {
+    message.error(err instanceof ApiError ? err.message : '资源加载失败')
   } finally {
     loading.value = false
   }

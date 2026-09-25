@@ -62,11 +62,15 @@ function clearBoard() {
 
 function onResize() {
   const canvas = canvasRef.value
-  const snapshot = canvas?.toDataURL()
+  if (!canvas) return
+  const snapshot = canvas.toDataURL()
   resize()
-  if (snapshot && canvas && canvas.width > 0) {
+  // ctx 已按 dpr 缩放，必须用 CSS 逻辑尺寸绘制，否则 dpr>1 时旧笔迹会被放大裁切
+  const w = canvas.clientWidth
+  const h = canvas.clientHeight
+  if (snapshot && w > 0 && h > 0) {
     const img = new Image()
-    img.onload = () => ctx?.drawImage(img, 0, 0, canvas.width, canvas.height)
+    img.onload = () => ctx?.drawImage(img, 0, 0, w, h)
     img.src = snapshot
   }
 }

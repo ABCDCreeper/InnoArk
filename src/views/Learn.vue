@@ -276,6 +276,7 @@ function onReset() {
 
     <LessonPlayer
       v-else
+      :key="`${activeCourse.id}-${activeLessonIndex}`"
       :course="activeCourse"
       :lesson-index="activeLessonIndex"
       @exit="phase = 'map'"

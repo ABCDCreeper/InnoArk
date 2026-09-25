@@ -1,5 +1,5 @@
-import type { DB, Feedback, GroupInviteRec, GroupMemberRec, Member, Project, QuizAttemptRec, QuizGroup, QuizQuestionRec, Role, Task, TaskStatus, User } from './db.ts'
-import { ROLE_RANK, createToken, genId, now, parseToken, pick, rankOf } from './db.ts'
+import type { Annotation, DB, Feedback, GroupInviteRec, GroupMemberRec, Member, Project, QuizAttemptRec, QuizGroup, QuizQuestionRec, Role, Task, TaskStatus, User } from './db.ts'
+import { FEEDBACK_POOL, ROLE_RANK, createToken, genId, now, parseToken, pick, rankOf } from './db.ts'
 
 export interface Ctx {
   db: DB
@@ -112,6 +112,11 @@ function inviteView(db: DB, invite: GroupInviteRec) {
   return { ...invite, name: user?.name ?? '', username: user?.username ?? '' }
 }
 
+function annotationView(db: DB, annotation: Annotation) {
+  const user = db.users.find((u) => u.id === annotation.userId)
+  return { ...annotation, name: user?.name ?? '' }
+}
+
 function validateQuestionBody(body: Record<string, any>) {
   const question = String(body.question ?? '').trim()
   if (!question) throw badRequest('题干不能为空')
@@ -147,15 +152,6 @@ const TASK_STATUS_LABEL: Record<TaskStatus, string> = {
   review: '待验收',
   done: '已完成',
 }
-
-const FEEDBACK_POOL = [
-  '里程碑达成！你们把一个大目标拆成了可执行的小步，这正是工程师思维。',
-  '干得漂亮！这一步的完成意味着整个项目又向前推进了一截。',
-  '进度同步得很好，接下来可以尝试把成果整理成可视化材料。',
-  '团队协作满分！记得在打卡里记录下这次尝试中的收获与踩坑。',
-  '这个节点很关键，完成后建议做一次小复盘，把经验沉淀到档案里。',
-  '思路清晰，继续推进！遇到瓶颈时回到星云看板看看最初的想法。',
-]
 
 function handleTaskStatusChange(db: DB, task: Task, user: User, oldStatus: TaskStatus) {
   addLog(db, task.projectId, task.id, user, 'status', `状态更新为 ${TASK_STATUS_LABEL[task.status]}`)
@@ -373,17 +369,18 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
       if (!node) throw notFound('节点不存在')
       const project = getProject(ctx.db, node.projectId)
       memberOf(ctx.db, project.id, ctx.user.id)
-      const collect = (id: string) => {
-        ctx.db.mindNodes = ctx.db.mindNodes.filter((n) => {
-          if (n.id === id) return false
-          if (n.parentId === id) {
-            collect(n.id)
-            return false
+      const doomed = new Set([node.id])
+      let grew = true
+      while (grew) {
+        grew = false
+        for (const n of ctx.db.mindNodes) {
+          if (n.parentId && doomed.has(n.parentId) && !doomed.has(n.id)) {
+            doomed.add(n.id)
+            grew = true
           }
-          return true
-        })
+        }
       }
-      collect(node.id)
+      ctx.db.mindNodes = ctx.db.mindNodes.filter((n) => !doomed.has(n.id))
       touchProject(project)
       return { status: 204 }
     },
@@ -693,7 +690,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
       const project = getProject(ctx.db, ctx.params[0])
       if (rankOf(ctx.user) < 1) memberOf(ctx.db, project.id, ctx.user.id)
       const items = ctx.db.annotations.filter((a) => a.projectId === project.id).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-      return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
+      return { status: 200, body: { items: items.map((a) => annotationView(ctx.db, a)), total: items.length, page: 1, pageSize: items.length } }
     },
   },
   {
@@ -706,7 +703,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
       if (!content) throw badRequest('批注内容不能为空')
       const annotation = { id: genId('a'), projectId: project.id, userId: ctx.user.id, content, createdAt: now() }
       ctx.db.annotations.push(annotation)
-      return { status: 201, body: annotation }
+      return { status: 201, body: annotationView(ctx.db, annotation) }
     },
   },
   {
@@ -1157,6 +1154,38 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
   },
   {
     method: 'GET',
+    pattern: /^\/api\/leaderboard$/,
+    handler: (ctx) => {
+      // 综合积分 = 最佳闯关得分×0.5 + 专注总分钟 + 打卡次数×2；scope=week 只统计近 7 天
+      const scope = ctx.query.get('scope') === 'week' ? 'week' : 'total'
+      const weekAgo = Date.now() - 7 * 86400000
+      const inScope = (iso: string) => scope === 'total' || new Date(iso).getTime() >= weekAgo
+      const items = ctx.db.users
+        .filter((u) => u.role === 'student')
+        .map((u) => {
+          const attempts = ctx.db.quizAttempts.filter((a) => a.userId === u.id && inScope(a.createdAt))
+          const quizBest = attempts.reduce((m, a) => Math.max(m, a.score), 0)
+          const focusMinutes = ctx.db.focusSessions
+            .filter((s) => s.userId === u.id && s.type === 'focus' && inScope(s.createdAt))
+            .reduce((sum, s) => sum + s.durationMin, 0)
+          const checkinCount = ctx.db.checkins.filter((c) => c.userId === u.id && inScope(c.createdAt)).length
+          return {
+            userId: u.id,
+            name: u.name,
+            username: u.username,
+            quizBest,
+            quizAttempts: attempts.length,
+            focusMinutes,
+            checkinCount,
+            score: Math.round(quizBest * 0.5 + focusMinutes + checkinCount * 2),
+          }
+        })
+        .sort((a, b) => b.score - a.score || b.focusMinutes - a.focusMinutes)
+      return { status: 200, body: { scope, items, total: items.length, page: 1, pageSize: items.length } }
+    },
+  },
+  {
+    method: 'GET',
     pattern: /^\/api\/quiz\/stats$/,
     handler: (ctx) => {
       const mine = ctx.db.quizAttempts.filter((a) => a.userId === ctx.user.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
@@ -1167,6 +1196,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
           attempts: mine.length,
           best: best ? { score: best.score, total: best.total, createdAt: best.createdAt } : null,
           last: mine[0] ? { score: mine[0].score, total: mine[0].total, createdAt: mine[0].createdAt } : null,
+          recent: mine.slice(0, 7),
         },
       }
     },

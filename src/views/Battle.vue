@@ -39,11 +39,14 @@ const urgent = computed(() => timeLeft.value <= 5000)
 let tickTimer: number | null = null
 let foeTimer: number | null = null
 let pauseTimer: number | null = null
+const hitTimers = new Set<number>()
 
 function stopTimers() {
   if (tickTimer !== null) { clearInterval(tickTimer); tickTimer = null }
   if (foeTimer !== null) { clearTimeout(foeTimer); foeTimer = null }
   if (pauseTimer !== null) { clearTimeout(pauseTimer); pauseTimer = null }
+  for (const t of hitTimers) clearTimeout(t)
+  hitTimers.clear()
 }
 
 onBeforeUnmount(stopTimers)
@@ -87,13 +90,14 @@ function beginQuestion() {
     if (timeLeft.value <= 0) {
       timeLeft.value = 0
       foeActed.value = true
+      myActed.value = true // 超时未作答视为放弃本题，直接结算进下一题
       settleIfDone()
     }
   }, 100)
 }
 
 function pick(i: number) {
-  if (picked.value !== null || !current.value) return
+  if (picked.value !== null || !current.value || timeLeft.value <= 0) return
   picked.value = i
   myActed.value = true
   if (i === current.value.answer && !foeActed.value) hurtFoe()
@@ -103,24 +107,27 @@ function pick(i: number) {
 function hurtMe() {
   myHp.value = Math.max(myHp.value - 1, 0)
   meHit.value = true
-  window.setTimeout(() => { meHit.value = false }, 500)
+  const t = window.setTimeout(() => { meHit.value = false; hitTimers.delete(t) }, 500)
+  hitTimers.add(t)
 }
 
 function hurtFoe() {
   foeHp.value = Math.max(foeHp.value - 1, 0)
   foeHit.value = true
-  window.setTimeout(() => { foeHit.value = false }, 500)
+  const t = window.setTimeout(() => { foeHit.value = false; hitTimers.delete(t) }, 500)
+  hitTimers.add(t)
 }
 
 function settleIfDone() {
+  if (pauseTimer !== null) return // 已排定结算，避免重复触发 next/finish
   if (myHp.value <= 0 || foeHp.value <= 0) {
     stopTimers()
-    pauseTimer = window.setTimeout(finish, 900)
+    pauseTimer = window.setTimeout(() => { pauseTimer = null; finish() }, 900)
     return
   }
   if (myActed.value && foeActed.value) {
     stopTimers()
-    pauseTimer = window.setTimeout(next, 1000)
+    pauseTimer = window.setTimeout(() => { pauseTimer = null; next() }, 1000)
   }
 }
 

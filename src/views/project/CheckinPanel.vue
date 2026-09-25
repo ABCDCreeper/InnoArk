@@ -22,9 +22,13 @@ const content = ref('')
 const submitting = ref(false)
 
 async function load() {
-  const [c, f] = await Promise.all([fetchCheckins(props.projectId), fetchFeedbacks(props.projectId)])
-  checkins.value = c.items
-  feedbacks.value = f.items
+  try {
+    const [c, f] = await Promise.all([fetchCheckins(props.projectId), fetchFeedbacks(props.projectId)])
+    checkins.value = c.items
+    feedbacks.value = f.items
+  } catch (err) {
+    message.error(err instanceof ApiError ? err.message : '打卡记录加载失败')
+  }
 }
 
 onMounted(load)

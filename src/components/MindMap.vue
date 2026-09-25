@@ -22,8 +22,10 @@ const PAD_X = 24
 
 const layout = computed(() => {
   const byParent = new Map<string, MindNode[]>()
+  const ids = new Set(props.nodes.map((n) => n.id))
   for (const n of props.nodes) {
-    const key = n.parentId ?? ''
+    // 父节点已不存在的孤儿挂到根层，避免布局缺坐标导致渲染崩溃
+    const key = n.parentId && ids.has(n.parentId) ? n.parentId : ''
     if (!byParent.has(key)) byParent.set(key, [])
     byParent.get(key)!.push(n)
   }
@@ -48,7 +50,7 @@ const layout = computed(() => {
   return { pos, leafCount: Math.max(leafCursor, 1), maxDepth }
 })
 
-const yOf = (id: string) => layout.value.pos.get(id)!.y * LEAF_GAP + 30
+const yOf = (id: string) => (layout.value.pos.get(id)?.y ?? 0) * LEAF_GAP + 30
 
 const nodeWidth = (label: string) => Math.min(Math.max(label.length * 15 + 28, 64), 260)
 const svgWidth = computed(() => layout.value.maxDepth * LEVEL_GAP + PAD_X + 320)
@@ -58,9 +60,11 @@ const paths = computed(() => {
   const { pos } = layout.value
   const out: string[] = []
   for (const n of props.nodes) {
-    const p = pos.get(n.id)!
+    const p = pos.get(n.id)
+    if (!p) continue
     for (const c of props.nodes.filter((x) => x.parentId === n.id)) {
-      const cp = pos.get(c.id)!
+      const cp = pos.get(c.id)
+      if (!cp) continue
       const x1 = p.x + nodeWidth(n.label)
       const y1 = yOf(n.id) + NODE_H / 2
       const x2 = cp.x
@@ -113,7 +117,7 @@ function confirmRemove() {
   }
 }
 
-const posOf = (id: string) => layout.value.pos.get(id)!
+const posOf = (id: string) => layout.value.pos.get(id) ?? { x: PAD_X, y: 0 }
 
 const viewportRef = ref<HTMLDivElement | null>(null)
 const pan = ref({ x: 0, y: 0 })

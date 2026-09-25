@@ -23,11 +23,13 @@ const rules = {
 const loading = ref(false)
 
 const handleLogin = async () => {
+  if (loading.value) return // 回车与表单 submit 会同时触发，避免双重提交
   loading.value = true
   try {
     await auth.login(formValue.value.username.trim(), formValue.value.password)
     message.success('登录成功')
-    const redirect = (route.query.redirect as string) || '/'
+    const q = route.query.redirect
+    const redirect = (Array.isArray(q) ? q[0] : q) || '/'
     router.push(redirect)
   } catch (err) {
     const msg = err instanceof ApiError ? err.message : '登录失败，请稍后重试'

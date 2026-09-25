@@ -19,8 +19,12 @@ const content = ref('')
 const submitting = ref(false)
 
 async function load() {
-  const res = await fetchAnnotations(props.projectId)
-  annotations.value = res.items
+  try {
+    const res = await fetchAnnotations(props.projectId)
+    annotations.value = res.items
+  } catch (err) {
+    message.error(err instanceof ApiError ? err.message : '批注加载失败')
+  }
 }
 
 onMounted(load)
@@ -76,7 +80,7 @@ function formatTime(iso: string) {
       <n-timeline-item
         v-for="a in annotations"
         :key="a.id"
-        title="王老师"
+        :title="a.name || '教师'"
         :content="a.content"
         :time="formatTime(a.createdAt)"
         type="warning"

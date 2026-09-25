@@ -21,6 +21,7 @@ const mindNodes = ref<MindNode[]>([])
 const notes = ref<StickyNote[]>([])
 
 let timer: ReturnType<typeof setInterval> | null = null
+let syncFailed = false // 5 秒轮询持续失败时只提示一次，恢复后重置，避免错误消息刷屏
 
 async function refresh() {
   try {
@@ -30,8 +31,12 @@ async function refresh() {
     ])
     mindNodes.value = nodes.items
     notes.value = noteList.items
+    syncFailed = false
   } catch (err) {
-    message.error(err instanceof ApiError ? err.message : '同步失败')
+    if (!syncFailed) {
+      message.error(err instanceof ApiError ? err.message : '看板同步失败，将自动重试')
+      syncFailed = true
+    }
   }
 }
 

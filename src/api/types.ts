@@ -108,6 +108,7 @@ export interface Annotation {
   id: string
   projectId: string
   userId: string
+  name?: string
   content: string
   createdAt: string
 }
@@ -198,6 +199,26 @@ export interface QuizStats {
   attempts: number
   best: { score: number; total: number; createdAt: string } | null
   last: { score: number; total: number; createdAt: string } | null
+  recent?: QuizAttempt[]
+}
+
+export interface QuizAttempt {
+  id: string
+  userId: string
+  score: number
+  total: number
+  createdAt: string
+}
+
+export interface LeaderboardItem {
+  userId: string
+  name: string
+  username: string
+  quizBest: number
+  quizAttempts: number
+  focusMinutes: number
+  checkinCount: number
+  score: number
 }
 
 export interface FocusStats {

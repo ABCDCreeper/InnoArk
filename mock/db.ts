@@ -100,6 +100,18 @@ export function genId(prefix: string) {
   seq += 1
   return `${prefix}${seq}`
 }
+
+// 重启后内存 seq 归零，而已持久化的数据仍持有旧 ID（如 fs23、qa1），
+// 必须先扫一遍历史 ID 抬高 seq，否则新记录会与旧记录撞 ID。
+function syncSeq(db: DB) {
+  for (const list of Object.values(db)) {
+    if (!Array.isArray(list)) continue
+    for (const rec of list) {
+      const m = typeof rec?.id === 'string' ? rec.id.match(/(\d+)$/) : null
+      if (m) seq = Math.max(seq, Number(m[1]))
+    }
+  }
+}
 export function now() {
   return new Date().toISOString()
 }
@@ -112,7 +124,7 @@ export function daysAgo(days: number, hour = 10, minute = 0) {
 const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)]
 const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min
 
-const FEEDBACK_POOL = [
+export const FEEDBACK_POOL = [
   '里程碑达成！你们把一个大目标拆成了可执行的小步，这正是工程师思维。',
   '干得漂亮！这一步的完成意味着整个项目又向前推进了一截。',
   '进度同步得很好，接下来可以尝试把成果整理成可视化材料。',
@@ -267,6 +279,11 @@ function seed(): DB {
     { id: 'qa1', userId: 'u1', score: 80, total: 100, createdAt: daysAgo(3, 15) },
     { id: 'qa2', userId: 'u1', score: 90, total: 100, createdAt: daysAgo(1, 16) },
     { id: 'qa3', userId: 'u2', score: 60, total: 100, createdAt: daysAgo(2, 10) },
+    { id: 'qa4', userId: 'u2', score: 75, total: 100, createdAt: daysAgo(5, 14) },
+    { id: 'qa5', userId: 'u3', score: 70, total: 100, createdAt: daysAgo(1, 9) },
+    { id: 'qa6', userId: 'u4', score: 85, total: 100, createdAt: daysAgo(4, 11) },
+    { id: 'qa7', userId: 'u4', score: 95, total: 100, createdAt: daysAgo(6, 20) },
+    { id: 'qa8', userId: 'u3', score: 55, total: 100, createdAt: daysAgo(9, 15) },
   ]
   for (let d = 6; d >= 1; d--) {
     const count = randInt(2, 4)
@@ -274,8 +291,12 @@ function seed(): DB {
       focusSessions.push({ id: genId('fs'), userId: 'u1', durationMin: 25, type: 'focus', createdAt: daysAgo(d, randInt(9, 20), randInt(0, 59)) })
     }
   }
-  for (const uid of ['u2', 'u3']) {
-    focusSessions.push({ id: genId('fs'), userId: uid, durationMin: 25, type: 'focus', createdAt: daysAgo(randInt(1, 5), randInt(9, 20), randInt(0, 59)) })
+  for (const f of [
+    { uid: 'u2', day: 1, hour: 15 }, { uid: 'u2', day: 2, hour: 10 }, { uid: 'u2', day: 3, hour: 19 }, { uid: 'u2', day: 5, hour: 9 },
+    { uid: 'u3', day: 0, hour: 11 }, { uid: 'u3', day: 2, hour: 16 }, { uid: 'u3', day: 4, hour: 14 }, { uid: 'u3', day: 8, hour: 10 },
+    { uid: 'u4', day: 1, hour: 20 }, { uid: 'u4', day: 6, hour: 15 },
+  ]) {
+    focusSessions.push({ id: genId('fs'), userId: f.uid, durationMin: 25, type: 'focus', createdAt: daysAgo(f.day, f.hour, randInt(0, 59)) })
   }
   return { version: SCHEMA_VERSION, users, topics, projects, members, mindNodes, notes, tasks, taskLogs, checkins, feedbacks, resources, annotations, focusSessions, quizGroups, groupMembers, groupInvites, quizQuestions, quizAttempts }
 }
@@ -284,7 +305,10 @@ export function loadDB(): DB {
   if (existsSync(DATA_FILE)) {
     try {
       const parsed = JSON.parse(readFileSync(DATA_FILE, 'utf-8')) as DB
-      if (parsed.version === SCHEMA_VERSION) return parsed
+      if (parsed.version === SCHEMA_VERSION) {
+        syncSeq(parsed)
+        return parsed
+      }
     } catch {
       // fall through to reseed
     }

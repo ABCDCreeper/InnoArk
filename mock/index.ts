@@ -45,7 +45,7 @@ export default function mockPlugin(): Plugin {
           const body = await readBody(req)
           const result = dispatch(db, req.method!, url.pathname, url.searchParams, body, req.headers.authorization)
           sendJson(res, result.status, result.body)
-          persist(db)
+          if (req.method !== 'GET' && req.method !== 'HEAD') persist(db)
         } catch (err) {
           if (err instanceof HttpError) {
             sendJson(res, err.status, { error: { code: err.code, message: err.message } })

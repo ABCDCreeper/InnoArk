@@ -27,6 +27,7 @@ const picked = ref<number | null>(null)
 const streak = ref(0)
 const maxStreak = ref(0)
 const praise = ref('')
+const encourage = ref('')
 const floaters = ref<Array<{ emoji: string; left: number; delay: number; size: number }>>([])
 const missed = ref<Array<{ q: QuizQuestion; pick: number }>>([])
 const stats = ref<QuizStats | null>(null)
@@ -135,6 +136,7 @@ function pick(i: number) {
     }))
   } else {
     streak.value = 0
+    encourage.value = ENCOURAGES[Math.floor(Math.random() * ENCOURAGES.length)]
     missed.value.push({ q: current.value, pick: i })
     growth.recordWrong({
       question: current.value.question,
@@ -336,7 +338,7 @@ function retryWrong(w: WrongItem, i: number) {
 
       <div v-if="answered" class="feedback" :class="picked === current.answer ? 'ok' : 'no'">
         <div v-if="picked === current.answer" class="fb-title">🎉 {{ praise }}</div>
-        <div v-else class="fb-title">💡 {{ ENCOURAGES[Math.floor(Math.random() * ENCOURAGES.length)] }}</div>
+        <div v-else class="fb-title">💡 {{ encourage }}</div>
         <div class="fb-expl">
           <span v-if="picked !== current.answer">
             <b>正确答案：{{ current.options[current.answer] }}</b><br />

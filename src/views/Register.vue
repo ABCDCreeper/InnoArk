@@ -41,6 +41,7 @@ const rules = {
 const loading = ref(false)
 
 const handleRegister = async () => {
+  if (loading.value) return // 回车与表单 submit 会同时触发，避免双重提交
   loading.value = true
   try {
     await auth.register({

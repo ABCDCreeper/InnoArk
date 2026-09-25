@@ -30,7 +30,14 @@ const COLUMNS: Array<{ status: TaskStatus; title: string; color: 'default' | 'wa
 ]
 
 const nameOf = (userId: string | null) => props.members.find((m) => m.id === userId)?.name ?? '未认领'
-const myId = () => JSON.parse(localStorage.getItem('innoark_user') || 'null')?.id as string | undefined
+
+function myId() {
+  try {
+    return (JSON.parse(localStorage.getItem('innoark_user') || 'null') as { id?: string } | null)?.id
+  } catch {
+    return undefined
+  }
+}
 
 const cardH = ref(130)
 
@@ -41,10 +48,14 @@ async function measureCard() {
 }
 
 async function load() {
-  const [taskList, logList] = await Promise.all([fetchTasks(props.projectId), fetchTaskLogs(props.projectId)])
-  tasks.value = taskList.items
-  logs.value = logList.items
-  await measureCard()
+  try {
+    const [taskList, logList] = await Promise.all([fetchTasks(props.projectId), fetchTaskLogs(props.projectId)])
+    tasks.value = taskList.items
+    logs.value = logList.items
+    await measureCard()
+  } catch (err) {
+    message.error(err instanceof ApiError ? err.message : '任务加载失败')
+  }
 }
 
 onMounted(load)
@@ -77,6 +88,7 @@ async function onDrop(status: TaskStatus) {
 
 const modal = ref(false)
 const editingId = ref<string | null>(null)
+const editingTask = computed(() => (editingId.value ? tasks.value.find((t) => t.id === editingId.value) ?? null : null))
 const form = ref({ title: '', description: '', dueDate: null as number | null })
 
 function openCreate() {
@@ -116,8 +128,13 @@ async function submit() {
 }
 
 async function toggleClaim(task: Task) {
+  const uid = myId()
+  if (!task.assigneeId && !uid) {
+    message.error('登录状态异常，请重新登录后再认领')
+    return
+  }
   try {
-    await updateTask(task.id, { assigneeId: task.assigneeId ? null : myId() ?? null })
+    await updateTask(task.id, { assigneeId: task.assigneeId ? null : uid ?? null })
     await load()
   } catch (err) {
     message.error(err instanceof ApiError ? err.message : '操作失败')
@@ -237,7 +254,7 @@ const logName = (userId: string) => props.members.find((m) => m.id === userId)?.
           <n-date-picker v-model:value="form.dueDate" type="date" clearable style="width: 200px;" />
         </n-space>
         <n-space justify="end">
-          <n-button v-if="editingId" type="error" ghost @click="confirmDelete(tasks.find((t) => t.id === editingId)!)">删除</n-button>
+          <n-button v-if="editingTask" type="error" ghost @click="confirmDelete(editingTask)">删除</n-button>
           <n-button @click="modal = false">取消</n-button>
           <n-button type="primary" :disabled="!form.title.trim()" @click="submit">保存</n-button>
         </n-space>

@@ -4,7 +4,7 @@ import { NCard, NGrid, NGridItem, NSpace, NText, NStatistic, useMessage } from '
 import Pomodoro from '../components/Pomodoro.vue'
 import CanvasWhiteboard from '../components/CanvasWhiteboard.vue'
 import WeeklyBar from '../components/WeeklyBar.vue'
-import { createFocusSession, fetchFocusStats } from '../api/focus'
+import { fetchFocusStats } from '../api/focus'
 import { usePomodoroStore } from '../stores/pomodoro'
 import type { FocusStats } from '../api/types'
 
@@ -13,26 +13,18 @@ const stats = ref<FocusStats | null>(null)
 const store = usePomodoroStore()
 
 async function load() {
-  stats.value = await fetchFocusStats(7)
+  try {
+    stats.value = await fetchFocusStats(7)
+  } catch {
+    message.error('专注统计加载失败')
+  }
 }
 
 onMounted(load)
 
-watch(() => store.sessionCompleted, (completed) => {
-  if (!completed) return
-  createFocusSession(completed.minutes, completed.mode)
-    .then(() => {
-      if (completed.mode === 'focus') {
-        message.success('完成一个番茄钟，休息一下吧！')
-      } else {
-        message.info('休息结束，继续加油！')
-      }
-      store.sessionCompleted = null
-      load()
-    })
-    .catch(() => {
-      store.sessionCompleted = null
-    })
+// 完成的番茄钟由 Layout 统一上报；这里只在记录落库后（completed 被清空）刷新统计
+watch(() => store.sessionCompleted, (cur, prev) => {
+  if (!cur && prev) load()
 })
 </script>
 

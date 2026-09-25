@@ -3,16 +3,18 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NCard, NGrid, NGridItem, NButton, NTag, NSpace, NText, NProgress, NEmpty, NAvatar, NIcon,
-  NRadioGroup, NRadioButton,
+  NRadioGroup, NRadioButton, useMessage,
 } from 'naive-ui'
 import { ChevronForwardOutline } from '@vicons/ionicons5'
 import { fetchTeacherProjects, fetchTeacherActivity } from '../api/teacher'
+import { ApiError } from '../api/request'
 import type { TeacherActivity } from '../api/teacher'
 import { fetchGroups } from '../api/group'
 import type { Project } from '../api/types'
 import type { QuizGroup } from '../api/types'
 
 const router = useRouter()
+const message = useMessage()
 const projects = ref<Project[]>([])
 const groups = ref<QuizGroup[]>([])
 const activities = ref<TeacherActivity[]>([])
@@ -28,6 +30,8 @@ async function load() {
     projects.value = res.items
     const act = await fetchTeacherActivity()
     activities.value = act.items
+  } catch (err) {
+    message.error(err instanceof ApiError ? err.message : '团队数据加载失败')
   } finally {
     loading.value = false
   }

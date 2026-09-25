@@ -31,6 +31,8 @@ async function load() {
     const [t, p] = await Promise.all([fetchTopics(), fetchProjects()])
     topics.value = t.items
     projects.value = p.items
+  } catch (err) {
+    message.error(err instanceof ApiError ? err.message : '项目加载失败')
   } finally {
     loading.value = false
   }
