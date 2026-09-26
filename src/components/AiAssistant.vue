@@ -135,9 +135,11 @@ const INTRO = '我是智创方舟的 AI 助教小智 🤖 我接入了平台的�
 function encourage(): string {
   return pickOne(ENCOURAGEMENTS)
 }
+
 function renderMd(text: string): string {
   return DOMPurify.sanitize(marked.parse(text, { async: false }) as string)
 }
+
 async function composeAnswer(q: string): Promise<string> {
   if (/(进度|项目)/.test(q)) return answerProgress()
   if (/(错题)/.test(q)) return answerWrong()
@@ -196,8 +198,9 @@ async function ask(text: string) {
 
       <div ref="listRef" class="ai-list">
         <div v-for="(m, i) in messages" :key="i" class="ai-msg" :class="m.role">
-          <div class="ai-bubble" v-html="m.role === 'ai' ? renderMd(m.text) : m.text"></div>
-      </div>
+          <div v-if="m.role === 'ai'" class="ai-bubble" v-html="renderMd(m.text)"></div>
+          <div v-else class="ai-bubble">{{ m.text }}</div>
+        </div>
         <div v-if="busy" class="ai-msg ai"><div class="ai-bubble typing">…</div></div>
       </div>
 
@@ -247,7 +250,7 @@ async function ask(text: string) {
   position: fixed;
   bottom: 76px;
   right: 20px;
-  z-index: 9998;
+  z-index: 10000;
   width: 380px;
   max-width: calc(100vw - 32px);
   height: 540px;
@@ -259,10 +262,6 @@ async function ask(text: string) {
   background: var(--n-color, #fff);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
   overflow: hidden;
-  color: var(--n-text-color, #333);
-  color: var(--n-text-color, #333);
-  --n-text-color: #333;
-  --n-placeholder-color: #999;
 }
 
 .ai-head {
@@ -403,19 +402,6 @@ async function ask(text: string) {
   gap: 8px;
   padding: 10px 12px;
 }
-
-/* 输入框文字和 placeholder 强制改色 */
-.ai-input-row :deep(.n-input__input-el),
-.ai-input-row :deep(.n-input__placeholder),
-.ai-input-row :deep(.n-input__mirror),
-.ai-input-row :deep(input) {
-  color: #333 !important;
-}
-
-.ai-input-row :deep(.n-input__placeholder) {
-  color: #999 !important;
-}
-
 
 .ai-pop-enter-active,
 .ai-pop-leave-active {
