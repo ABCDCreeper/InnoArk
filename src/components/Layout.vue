@@ -4,7 +4,7 @@ import type { Component } from 'vue'
 import {
   NLayout, NLayoutHeader, NLayoutSider, NLayoutContent, NLayoutFooter,
   NMenu, NText, NIcon, NButton, NTag, NAvatar, NSpace, NPopover, NDrawer, NDrawerContent, NBadge,
-  NModal, NInput,
+  NModal, NInput, useMessage,
 } from 'naive-ui'
 import {
   HomeOutline as HomeIcon,
@@ -27,7 +27,6 @@ import {
 } from '@vicons/ionicons5'
 
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import { useMessage } from 'naive-ui'
 import { useAuthStore } from '../stores/auth'
 import { useNotifyStore } from '../stores/notify'
 import { usePomodoroStore } from '../stores/pomodoro'
@@ -160,10 +159,7 @@ const cmdQuery = ref('')
 const cmdProjects = ref<Project[]>([])
 const cmdResources = ref<Resource[]>([])
 
-const allPages = computed(() => {
-  const seen = new Set<string>()
-  return [...studentMenu, ...teacherMenu, ...managerMenu].filter((d) => (seen.has(d.key) ? false : (seen.add(d.key), true)))
-})
+const allPages = computed(() => (auth.isManager ? managerMenu : auth.isTeacher ? teacherMenu : studentMenu))
 
 const cmdPages = computed(() => {
   const q = cmdQuery.value.trim().toLowerCase()
