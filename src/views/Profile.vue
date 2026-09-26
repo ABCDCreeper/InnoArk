@@ -67,6 +67,25 @@ function dateKey(offsetDays = 0) {
   return `${d.getFullYear()}-${m}-${day}`
 }
 
+function dateKeyOf(d: Date) {
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+}
+
+// 近 12 周签到热力图：84 格按列填充（最旧 → 今天），CSS 用 grid-auto-flow: column
+const heatCells = computed(() => {
+  const cells: Array<{ key: string; signed: boolean; title: string }> = []
+  for (let i = 83; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    const key = dateKeyOf(d)
+    const signed = growth.signs.includes(key)
+    cells.push({ key, signed, title: `${d.getMonth() + 1}月${d.getDate()}日${signed ? ' · 已签到' : ''}` })
+  }
+  return cells
+})
+
 function generateCard() {
   const canvas = document.createElement('canvas')
   canvas.width = 720
@@ -202,6 +221,21 @@ function generateCard() {
         </n-grid-item>
       </n-grid>
       <n-text style="font-size: 13px; display: block; margin-top: 10px;">🤖 小智点评：{{ weekReport.summary }}</n-text>
+    </n-card>
+
+    <n-card size="small" title="🗓️ 签到热力图">
+      <template #header-extra>
+        <n-text depth="3" style="font-size: 12px;">近 12 周 · 累计 {{ growth.signDays }} 天</n-text>
+      </template>
+      <div class="heat-grid">
+        <span
+          v-for="cell in heatCells"
+          :key="cell.key"
+          class="heat-cell"
+          :class="{ on: cell.signed }"
+          :title="cell.title"
+        />
+      </div>
     </n-card>
 
     <n-card size="small" title="🃏 图鉴收集进度">
@@ -393,6 +427,26 @@ function generateCard() {
 .report-num {
   font-size: 24px;
   font-weight: 800;
+}
+
+.heat-grid {
+  display: grid;
+  grid-template-rows: repeat(7, 12px);
+  grid-auto-flow: column;
+  grid-auto-columns: 12px;
+  gap: 3px;
+  width: fit-content;
+}
+
+.heat-cell {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: rgba(128, 128, 128, 0.18);
+}
+
+.heat-cell.on {
+  background: #18a058;
 }
 
 .share-title {

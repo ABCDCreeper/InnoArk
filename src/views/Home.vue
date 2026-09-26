@@ -12,8 +12,9 @@ import { useAuthStore } from '../stores/auth'
 import { fetchProjects } from '../api/project'
 import { fetchFocusStats } from '../api/focus'
 import { fetchMyInvites, respondInvite } from '../api/group'
+import { fetchMyDeadlines } from '../api/task'
 import { ApiError } from '../api/request'
-import type { FocusStats, Project, StudentInvite } from '../api/types'
+import type { DeadlineItem, FocusStats, Project, StudentInvite } from '../api/types'
 
 const router = useRouter()
 const message = useMessage()
@@ -22,6 +23,7 @@ const auth = useAuthStore()
 const projects = ref<Project[]>([])
 const stats = ref<FocusStats | null>(null)
 const loading = ref(true)
+const deadlines = ref<DeadlineItem[]>([])
 
 const invites = ref<StudentInvite[]>([])
 const respondingId = ref<string | null>(null)
@@ -50,9 +52,10 @@ async function respond(iv: StudentInvite, accept: boolean) {
 
 onMounted(async () => {
   try {
-    const [proj, focus] = await Promise.all([fetchProjects(), fetchFocusStats(7)])
+    const [proj, focus, dl] = await Promise.all([fetchProjects(), fetchFocusStats(7), fetchMyDeadlines()])
     projects.value = proj.items
     stats.value = focus
+    deadlines.value = dl.items
   } catch (err) {
     message.error(err instanceof ApiError ? err.message : '首页数据加载失败')
   } finally {
@@ -139,6 +142,19 @@ const greeting = () => {
         <n-button text type="primary" size="small" style="justify-content: flex-start;" @click="router.push('/my-groups')">
           查看我的分组 →
         </n-button>
+      </n-space>
+    </n-card>
+
+    <n-card v-if="deadlines.length > 0" title="⏰ 截止提醒">
+      <n-space vertical size="small">
+        <div v-for="d in deadlines" :key="d.id" class="group-row">
+          <n-tag size="small" :type="d.overdue ? 'error' : 'warning'" :bordered="false">
+            {{ d.overdue ? '已逾期' : '即将到期' }}
+          </n-tag>
+          <n-text style="font-size: 13px;">{{ d.title }}</n-text>
+          <n-text depth="3" style="font-size: 12px;">{{ d.project }} · {{ new Date(d.dueDate).getMonth() + 1 }}月{{ new Date(d.dueDate).getDate() }}日</n-text>
+          <n-button size="tiny" quaternary type="primary" @click="router.push(`/project/${d.projectId}`)">去处理 →</n-button>
+        </div>
       </n-space>
     </n-card>
 

@@ -221,6 +221,30 @@ export interface LeaderboardItem {
   score: number
 }
 
+export interface DeadlineItem {
+  id: string
+  projectId: string
+  project: string
+  title: string
+  status: TaskStatus
+  dueDate: string
+  overdue: boolean
+}
+
+export interface TeacherStatsItem {
+  id: string
+  name: string
+  status: 'active' | 'finished'
+  memberCount: number
+  taskTotal: number
+  todo: number
+  doing: number
+  review: number
+  done: number
+  checkinCount: number
+  focusMinutes: number
+}
+
 export interface FocusStats {
   today: { count: number; minutes: number }
   week: Array<{ date: string; count: number; minutes: number }>

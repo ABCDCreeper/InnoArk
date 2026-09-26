@@ -6,9 +6,10 @@ import {
   NRadioGroup, NRadioButton, useMessage,
 } from 'naive-ui'
 import { ChevronForwardOutline } from '@vicons/ionicons5'
-import { fetchTeacherProjects, fetchTeacherActivity } from '../api/teacher'
+import { fetchTeacherProjects, fetchTeacherActivity, fetchTeacherStats } from '../api/teacher'
 import { ApiError } from '../api/request'
 import type { TeacherActivity } from '../api/teacher'
+import type { TeacherStatsItem } from '../api/types'
 import { fetchGroups } from '../api/group'
 import type { Project } from '../api/types'
 import type { QuizGroup } from '../api/types'
@@ -18,18 +19,23 @@ const message = useMessage()
 const projects = ref<Project[]>([])
 const groups = ref<QuizGroup[]>([])
 const activities = ref<TeacherActivity[]>([])
+const stats = ref<TeacherStatsItem[]>([])
 const filter = ref('')
 const loading = ref(true)
 
 async function load() {
   loading.value = true
   try {
-    const g = await fetchGroups()
+    const [g, res, act, st] = await Promise.all([
+      fetchGroups(),
+      fetchTeacherProjects(filter.value || undefined),
+      fetchTeacherActivity(),
+      fetchTeacherStats(),
+    ])
     groups.value = g.items
-    const res = await fetchTeacherProjects(filter.value || undefined)
     projects.value = res.items
-    const act = await fetchTeacherActivity()
     activities.value = act.items
+    stats.value = st.items
   } catch (err) {
     message.error(err instanceof ApiError ? err.message : '团队数据加载失败')
   } finally {
@@ -101,6 +107,26 @@ function avatarColor(name: string) {
         <span class="activity-name">{{ a.name }}</span>
         <span class="activity-text">{{ a.text }}</span>
         <span class="activity-time">{{ relativeTime(a.createdAt) }}</span>
+      </div>
+    </n-card>
+
+    <n-card size="small" title="📊 团队任务分布" :loading="loading">
+      <n-empty v-if="!loading && stats.length === 0" description="暂无项目数据" size="small" style="padding: 16px 0;" />
+      <div
+        v-for="s in stats"
+        :key="s.id"
+        style="display: flex; align-items: center; gap: 12px; padding: 8px 0; flex-wrap: wrap;"
+      >
+        <span style="width: 180px; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ s.name }}</span>
+        <div style="flex: 1; min-width: 160px; height: 10px; display: flex; border-radius: 5px; overflow: hidden; background: rgba(128,128,128,0.15);">
+          <span :style="{ flex: s.todo, background: 'rgba(128,128,128,0.5)' }" :title="`待认领 ${s.todo}`" />
+          <span :style="{ flex: s.doing, background: '#f0a020' }" :title="`进行中 ${s.doing}`" />
+          <span :style="{ flex: s.review, background: '#2080f0' }" :title="`待验收 ${s.review}`" />
+          <span :style="{ flex: s.done, background: '#18a058' }" :title="`已完成 ${s.done}`" />
+        </div>
+        <span style="font-size: 12px; opacity: 0.75; white-space: nowrap;">
+          ✅ {{ s.done }}/{{ s.taskTotal }} · 🍅 {{ s.focusMinutes }}min · 👥 {{ s.memberCount }} · ✍️ {{ s.checkinCount }}
+        </span>
       </div>
     </n-card>
 

@@ -1201,6 +1201,64 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
       }
     },
   },
+  {
+    method: 'GET',
+    pattern: /^\/api\/my\/deadlines$/,
+    handler: (ctx) => {
+      // 未来 7 天内到期（含已逾期）且未完成的任务，按截止时间升序
+      const horizon = Date.now() + 7 * 86400000
+      const memberProjects = ctx.db.members.filter((m) => m.userId === ctx.user.id).map((m) => m.projectId)
+      const visible = rankOf(ctx.user) >= 1 ? ctx.db.projects.map((p) => p.id) : memberProjects
+      const items = ctx.db.tasks
+        .filter((t) => visible.includes(t.projectId) && t.status !== 'done' && !!t.dueDate && new Date(t.dueDate).getTime() <= horizon)
+        .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''))
+        .slice(0, 20)
+        .map((t) => {
+          const project = ctx.db.projects.find((p) => p.id === t.projectId)
+          return {
+            id: t.id,
+            projectId: t.projectId,
+            project: project?.name ?? '',
+            title: t.title,
+            status: t.status,
+            dueDate: t.dueDate!,
+            overdue: t.dueDate! < now(),
+          }
+        })
+      return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
+    },
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/teacher\/stats$/,
+    handler: (ctx) => {
+      if (rankOf(ctx.user) < 1) throw forbidden('仅教师及以上可访问')
+      const items = ctx.db.projects
+        .slice()
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+        .map((p) => {
+          const tasks = ctx.db.tasks.filter((t) => t.projectId === p.id)
+          const memberIds = ctx.db.members.filter((m) => m.projectId === p.id).map((m) => m.userId)
+          const focusMinutes = ctx.db.focusSessions
+            .filter((s) => s.type === 'focus' && memberIds.includes(s.userId))
+            .reduce((sum, s) => sum + s.durationMin, 0)
+          return {
+            id: p.id,
+            name: p.name,
+            status: p.status,
+            memberCount: memberIds.length,
+            taskTotal: tasks.length,
+            todo: tasks.filter((t) => t.status === 'todo').length,
+            doing: tasks.filter((t) => t.status === 'doing').length,
+            review: tasks.filter((t) => t.status === 'review').length,
+            done: tasks.filter((t) => t.status === 'done').length,
+            checkinCount: ctx.db.checkins.filter((c) => c.projectId === p.id).length,
+            focusMinutes,
+          }
+        })
+      return { status: 200, body: { items, total: items.length, page: 1, pageSize: items.length } }
+    },
+  },
 ]
 
 export function dispatch(db: DB, method: string, url: string, query: URLSearchParams, body: Record<string, any>, token?: string) {

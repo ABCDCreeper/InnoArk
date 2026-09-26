@@ -7,6 +7,7 @@ import {
 import { SendOutline } from '@vicons/ionicons5'
 import { fetchCheckins, createCheckin, fetchFeedbacks } from '../../api/resource'
 import { ApiError } from '../../api/request'
+import { downloadCsv } from '../../utils/csv'
 import type { Checkin, Feedback } from '../../api/types'
 
 const props = defineProps<{
@@ -34,6 +35,12 @@ async function load() {
 onMounted(load)
 
 const nameOf = (userId: string) => props.members.find((m) => m.id === userId)?.name ?? '成员'
+
+function exportCheckinsCsv() {
+  const rows = checkins.value.map((c) => [nameOf(c.userId), c.content, formatTime(c.createdAt)])
+  downloadCsv(`checkins-${props.projectId}.csv`, ['打卡人', '内容', '时间'], rows)
+  message.success('打卡记录已导出')
+}
 
 async function submit() {
   const text = content.value.trim()
@@ -66,7 +73,10 @@ const feedbackLabel = (f: Feedback) => (f.type === 'milestone' ? '里程碑' : '
     <n-grid-item span="2 m:1">
       <n-card title="每日打卡" size="small">
         <template #header-extra>
-          <n-text depth="3" style="font-size: 12px;">共 {{ checkins.length }} 次打卡</n-text>
+          <n-space align="center" size="small">
+            <n-button size="tiny" quaternary :disabled="checkins.length === 0" @click="exportCheckinsCsv">导出 CSV</n-button>
+            <n-text depth="3" style="font-size: 12px;">共 {{ checkins.length }} 次打卡</n-text>
+          </n-space>
         </template>
         <div v-if="editable" class="checkin-form">
           <n-input

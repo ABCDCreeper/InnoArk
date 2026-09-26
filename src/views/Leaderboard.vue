@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { NCard, NRadioGroup, NRadioButton, NSpin, NText, NEmpty, useMessage } from 'naive-ui'
 import { fetchLeaderboard } from '../api/leaderboard'
 import { ApiError } from '../api/request'
+import { downloadCsv } from '../utils/csv'
 import { useAuthStore } from '../stores/auth'
 import type { LeaderboardItem } from '../api/types'
 
@@ -46,6 +47,15 @@ function myRank() {
   return idx === -1 ? null : idx + 1
 }
 const myItem = computed(() => items.value.find(isMe) ?? null)
+
+function exportLeaderboardCsv() {
+  downloadCsv(
+    `leaderboard-${scope.value}.csv`,
+    ['名次', '姓名', '用户名', '最佳闯关', '闯关次数', '专注分钟', '打卡次数', '综合积分'],
+    items.value.map((it, i) => [i + 1, it.name, it.username, it.quizBest, it.quizAttempts, it.focusMinutes, it.checkinCount, it.score]),
+  )
+  message.success('榜单已导出')
+}
 </script>
 
 <template>
@@ -59,10 +69,13 @@ const myItem = computed(() => items.value.find(isMe) ?? null)
             <template v-if="myRank()">· 你当前第 {{ myRank() }} 名</template>
           </n-text>
         </div>
-        <n-radio-group :value="scope" size="small" @update:value="switchScope">
-          <n-radio-button value="total">总榜</n-radio-button>
-          <n-radio-button value="week">本周</n-radio-button>
-        </n-radio-group>
+        <n-space align="center" size="small">
+          <n-button size="small" quaternary :disabled="items.length === 0" @click="exportLeaderboardCsv">导出 CSV</n-button>
+          <n-radio-group :value="scope" size="small" @update:value="switchScope">
+            <n-radio-button value="total">总榜</n-radio-button>
+            <n-radio-button value="week">本周</n-radio-button>
+          </n-radio-group>
+        </n-space>
       </div>
     </n-card>
 

@@ -7,6 +7,7 @@ import {
 import { AddOutline } from '@vicons/ionicons5'
 import { fetchTasks, createTask, updateTask, deleteTask, fetchTaskLogs } from '../../api/task'
 import { ApiError } from '../../api/request'
+import { downloadCsv } from '../../utils/csv'
 import type { Task, TaskLog, TaskStatus, User } from '../../api/types'
 
 const props = defineProps<{
@@ -170,6 +171,29 @@ function formatDue(iso: string | null) {
   return `${d.getMonth() + 1}月${d.getDate()}日`
 }
 
+// 截止状态徽标：已逾期红色 / 3 天内到期琥珀色；已完成或无截止返回 null
+function dueInfo(task: Task): { label: string; type: 'error' | 'warning' } | null {
+  if (!task.dueDate || task.status === 'done') return null
+  const due = new Date(task.dueDate).getTime()
+  if (Number.isNaN(due)) return null
+  if (due < Date.now()) return { label: `已逾期 · ${formatDue(task.dueDate)}`, type: 'error' }
+  if (due - Date.now() < 3 * 86400000) return { label: `${formatDue(task.dueDate)} 到期`, type: 'warning' }
+  return null
+}
+
+function exportTasksCsv() {
+  const rows = tasks.value.map((t) => [
+    t.title,
+    t.description,
+    props.members.find((m) => m.id === t.assigneeId)?.name ?? '未认领',
+    t.status,
+    t.dueDate ? formatDue(t.dueDate) : '',
+    formatTime(t.createdAt),
+  ])
+  downloadCsv(`tasks-${props.projectId}.csv`, ['标题', '描述', '负责人', '状态', '截止', '创建时间'], rows)
+  message.success('任务清单已导出')
+}
+
 const logName = (userId: string) => props.members.find((m) => m.id === userId)?.name ?? userId
 </script>
 
@@ -182,10 +206,13 @@ const logName = (userId: string) => props.members.find((m) => m.id === userId)?.
           <n-progress type="line" :percentage="progress.percent" :height="10" style="width: 260px;" />
           <n-tag :bordered="false" size="small">{{ progress.done }}/{{ progress.total }}</n-tag>
         </n-space>
-        <n-button v-if="editable" type="primary" size="small" @click="openCreate">
-          <template #icon><n-icon><add-outline /></n-icon></template>
-          新建任务
-        </n-button>
+        <n-space v-if="editable || tasks.length > 0" align="center">
+          <n-button size="small" quaternary :disabled="tasks.length === 0" @click="exportTasksCsv">导出 CSV</n-button>
+          <n-button v-if="editable" type="primary" size="small" @click="openCreate">
+            <template #icon><n-icon><add-outline /></n-icon></template>
+            新建任务
+          </n-button>
+        </n-space>
       </n-space>
     </n-card>
 
@@ -216,7 +243,8 @@ const logName = (userId: string) => props.members.find((m) => m.id === userId)?.
             <n-text v-if="task.description" depth="3" style="font-size: 12px;">{{ task.description }}</n-text>
             <n-space align="center" justify="space-between" style="margin-top: 8px;">
               <n-tag size="tiny" :bordered="false" :type="task.assigneeId ? 'success' : 'default'">{{ nameOf(task.assigneeId) }}</n-tag>
-              <n-text v-if="task.dueDate" depth="3" style="font-size: 11px;">截止 {{ formatDue(task.dueDate) }}</n-text>
+              <n-tag v-if="dueInfo(task)" size="tiny" :bordered="false" :type="dueInfo(task)!.type">{{ dueInfo(task)!.label }}</n-tag>
+              <n-text v-else-if="task.dueDate" depth="3" style="font-size: 11px;">截止 {{ formatDue(task.dueDate) }}</n-text>
             </n-space>
             <n-button
               v-if="editable && task.status !== 'done'"

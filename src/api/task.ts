@@ -1,5 +1,5 @@
 import { get, post, patch, del } from './request'
-import type { Paged, Task, TaskLog, TaskStatus } from './types'
+import type { DeadlineItem, Paged, Task, TaskLog, TaskStatus } from './types'
 
 export const fetchTasks = (projectId: string, query?: { status?: TaskStatus; assigneeId?: string }) => {
   const params = new URLSearchParams()
@@ -16,3 +16,4 @@ export const updateTask = (
 ) => patch<Task>(`/tasks/${id}`, body)
 export const deleteTask = (id: string) => del<void>(`/tasks/${id}`)
 export const fetchTaskLogs = (projectId: string) => get<Paged<TaskLog>>(`/projects/${projectId}/task-logs`)
+export const fetchMyDeadlines = () => get<Paged<DeadlineItem>>('/my/deadlines')

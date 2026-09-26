@@ -4,7 +4,7 @@ import type { Component } from 'vue'
 import {
   NLayout, NLayoutHeader, NLayoutSider, NLayoutContent, NLayoutFooter,
   NMenu, NText, NIcon, NButton, NTag, NAvatar, NSpace, NPopover, NDrawer, NDrawerContent, NBadge,
-  NModal, NInput, useMessage,
+  NModal, NInput, useMessage, useNotification,
 } from 'naive-ui'
 import {
   HomeOutline as HomeIcon,
@@ -31,6 +31,7 @@ import { useAuthStore } from '../stores/auth'
 import { useNotifyStore } from '../stores/notify'
 import { usePomodoroStore } from '../stores/pomodoro'
 import { useGrowthStore } from '../stores/growth'
+import { useSettingsStore } from '../stores/settings'
 import { createFocusSession } from '../api/focus'
 import { fetchProjects } from '../api/project'
 import { fetchResources } from '../api/resource'
@@ -43,6 +44,35 @@ const router = useRouter()
 const auth = useAuthStore()
 const notify = useNotifyStore()
 const message = useMessage()
+const notification = useNotification()
+const settings = useSettingsStore()
+
+// —— 健康提醒 ——
+// 学习是全局体验：连续使用达到设定时长后应弹通知提醒休息，
+// 而不是只在专注页有效；开关或间隔变化时重新布防定时器
+let healthTimer: number | null = null
+
+function stopHealthTimer() {
+  if (healthTimer !== null) {
+    window.clearInterval(healthTimer)
+    healthTimer = null
+  }
+}
+
+function armHealthTimer() {
+  stopHealthTimer()
+  if (!settings.healthReminder) return
+  const ms = Math.max(1, settings.healthIntervalMin) * 60000
+  healthTimer = window.setInterval(() => {
+    notification.warning({
+      title: '健康提醒',
+      content: `你已经连续学习 ${settings.healthIntervalMin} 分钟啦，起来活动一下、看看远处吧 👀`,
+      duration: 8000,
+    })
+  }, ms)
+}
+
+watch(() => [settings.healthReminder, settings.healthIntervalMin], armHealthTimer)
 
 // 番茄钟是全局组件，完成事件必须在这里消费（而不是只在 Focus 页），
 // 否则用户切走页面后完成的专注记录会被静默丢弃。
@@ -220,11 +250,13 @@ onMounted(() => {
   updateViewport()
   window.addEventListener('resize', onResize)
   window.addEventListener('keydown', onCmdKeydown)
+  armHealthTimer()
 })
 onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
   window.removeEventListener('keydown', onCmdKeydown)
   if (cmdDebounce !== null) clearTimeout(cmdDebounce)
+  stopHealthTimer()
 })
 </script>
 

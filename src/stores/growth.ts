@@ -295,5 +295,7 @@ export const useGrowthStore = defineStore('growth', () => {
     return save.value.battleTotal
   })
 
-  return { signedToday, signDays, signStreak, monthSigns, tasks, wrongBook, collection, signIn, refreshTasks, markQuizPlayed, grantLessonDrop, grantQuizDrop, setComplete, setOwnedCount, recordWrong, removeWrong, clearWrong, dailyQuestion, dailyResult, initDailyQuestion, answerDaily, recordBattle, battleWins, battleTotal }
+  // 用 computed 跟随 save.value：切换用户 load() 替换整个 save 后，signs 仍指向当前用户的数据
+  const signs = computed(() => save.value.signs)
+  return { signedToday, signDays, signStreak, monthSigns, signs, tasks, wrongBook, collection, signIn, refreshTasks, markQuizPlayed, grantLessonDrop, grantQuizDrop, setComplete, setOwnedCount, recordWrong, removeWrong, clearWrong, dailyQuestion, dailyResult, initDailyQuestion, answerDaily, recordBattle, battleWins, battleTotal }
 })
