@@ -135,8 +135,21 @@ function encourage(): string {
   return pickOne(ENCOURAGEMENTS)
 }
 
-function renderMd(text: string): string {
-  return DOMPurify.sanitize(marked.parse(text, { async: false }) as string)
+// 按消息对象缓存渲染结果：打字机每 16ms 更新一条消息，
+// 缓存命中可避免每次重渲染都对全部历史消息重新 parse + sanitize
+const mdCache = new WeakMap<Msg, { text: string; html: string }>()
+
+function renderMd(m: Msg): string {
+  const hit = mdCache.get(m)
+  if (hit && hit.text === m.text) return hit.html
+  const html = DOMPurify.sanitize(marked.parse(m.text, { async: false }) as string)
+  mdCache.set(m, { text: m.text, html })
+  return html
+}
+
+function scrollBottomSync() {
+  const el = listRef.value
+  if (el) el.scrollTop = el.scrollHeight
 }
 
 async function composeAnswer(q: string): Promise<string> {
@@ -174,7 +187,7 @@ async function ask(text: string) {
     i += 2
     msg.text = reply.slice(0, i)
     if (i >= reply.length) stopTyping()
-    scrollBottom()
+    scrollBottomSync()
   }, 16)
 }
 </script>
@@ -197,7 +210,7 @@ async function ask(text: string) {
 
       <div ref="listRef" class="ai-list">
         <div v-for="(m, i) in messages" :key="i" class="ai-msg" :class="m.role">
-          <div v-if="m.role === 'ai'" class="ai-bubble" v-html="renderMd(m.text)"></div>
+          <div v-if="m.role === 'ai'" class="ai-bubble" v-html="renderMd(m)"></div>
           <div v-else class="ai-bubble">{{ m.text }}</div>
         </div>
         <div v-if="busy" class="ai-msg ai"><div class="ai-bubble typing">…</div></div>
@@ -342,7 +355,8 @@ async function ask(text: string) {
 }
 
 .ai-msg.ai .ai-bubble code {
-  background: rgba(0, 0, 0, 0.08);
+  /* 中性色：亮暗两种主题下都可读 */
+  background: rgba(128, 128, 128, 0.22);
   padding: 1px 4px;
   border-radius: 4px;
   font-size: 12px;
