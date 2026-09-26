@@ -18,22 +18,38 @@ const emit = defineEmits<{
 
 const COLORS = ['#fde68a', '#bbf7d0', '#bae6fd', '#fbcfe8', '#ddd6fe']
 
-const dragPos = ref<{ id: string; x: number; y: number } | null>(null)
 const editingId = ref<string | null>(null)
 const editingText = ref('')
 const dragOffset = ref({ dx: 0, dy: 0 })
 
+// 拖拽期间用普通变量追踪，不走 Vue 响应式
+let dragId: string | null = null
+let dragX = 0
+let dragY = 0
+let dragEl: HTMLElement | null = null
 let dragStart: { x: number; y: number } | null = null
 let dragging = false
+let cachedRect: DOMRect | null = null
 
-const posOf = (note: StickyNote) =>
-  dragPos.value?.id === note.id ? dragPos.value : { x: note.x, y: note.y }
+const posOf = (note: StickyNote) => {
+  if (dragId === note.id) return { x: dragX, y: dragY }
+  return { x: note.x, y: note.y }
+}
 
 function onPointerDown(e: PointerEvent, note: StickyNote) {
   if (!props.editable) return
-  const rect = (e.currentTarget as HTMLElement).closest('.notes-area')!.getBoundingClientRect()
+  e.preventDefault()
+  const header = e.currentTarget as HTMLElement
+  const areaEl = header.closest('.notes-area') as HTMLElement | null
+  const noteEl = header.closest('.note') as HTMLElement | null
+  if (!areaEl || !noteEl) return
+  const rect = areaEl.getBoundingClientRect()
+  cachedRect = rect
+  dragEl = noteEl
   dragOffset.value = { dx: e.clientX - rect.left - note.x, dy: e.clientY - rect.top - note.y }
-  dragPos.value = { id: note.id, x: note.x, y: note.y }
+  dragId = note.id
+  dragX = note.x
+  dragY = note.y
   dragStart = { x: e.clientX, y: e.clientY }
   dragging = false
   window.addEventListener('pointermove', onPointerMove)
@@ -42,29 +58,30 @@ function onPointerDown(e: PointerEvent, note: StickyNote) {
 }
 
 function onPointerMove(e: PointerEvent) {
-  if (!dragPos.value || !dragStart) return
+  if (!dragId || !dragStart || !cachedRect || !dragEl) return
   if (!dragging) {
-    if (Math.hypot(e.clientX - dragStart.x, e.clientY - dragStart.y) < 3) return
+    if (Math.hypot(e.clientX - dragStart.x, e.clientY - dragStart.y) < 2) return
     dragging = true
   }
-  const rect = (document.querySelector('.notes-area') as HTMLElement).getBoundingClientRect()
-  dragPos.value = {
-    id: dragPos.value.id,
-    x: Math.max(0, Math.min(e.clientX - rect.left - dragOffset.value.dx, rect.width - 180)),
-    y: Math.max(0, Math.min(e.clientY - rect.top - dragOffset.value.dy, rect.height - 120)),
-  }
+  const rect = cachedRect
+  dragX = Math.max(0, Math.min(e.clientX - rect.left - dragOffset.value.dx, rect.width - 180))
+  dragY = Math.max(0, Math.min(e.clientY - rect.top - dragOffset.value.dy, rect.height - 120))
+  // 关键：直接改 DOM，绕过 Vue，流畅到飞起
+  dragEl.style.transform = `translate(${dragX}px, ${dragY}px)`
 }
 
 function onPointerUp() {
   window.removeEventListener('pointermove', onPointerMove)
   window.removeEventListener('pointerup', onPointerUp)
   window.removeEventListener('pointercancel', onPointerUp)
-  if (dragPos.value && dragging) {
-    emit('update', dragPos.value.id, { x: dragPos.value.x, y: dragPos.value.y })
+  if (dragId && dragging) {
+    emit('update', dragId, { x: dragX, y: dragY })
   }
+  dragId = null
+  dragEl = null
   dragStart = null
-  dragPos.value = null
   dragging = false
+  cachedRect = null
 }
 
 function startEdit(note: StickyNote) {
@@ -108,15 +125,12 @@ onBeforeUnmount(onPointerUp)
         v-for="note in notes"
         :key="note.id"
         class="note"
-        :style="{ left: `${posOf(note).x}px`, top: `${posOf(note).y}px`, background: note.color }"
+        :style="{ transform: `translate(${posOf(note).x}px, ${posOf(note).y}px)`, background: note.color }"
       >
         <div
           v-if="editable"
           class="note-header"
           @pointerdown="onPointerDown($event, note)"
-          @pointermove="onPointerMove"
-          @pointerup="onPointerUp"
-          @pointercancel="onPointerUp"
         >
           <n-popover trigger="hover">
             <template #trigger>
@@ -174,6 +188,8 @@ onBeforeUnmount(onPointerUp)
 
 .note {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 180px;
   min-height: 110px;
   border-radius: 6px;
@@ -183,6 +199,7 @@ onBeforeUnmount(onPointerUp)
   touch-action: none;
   display: flex;
   flex-direction: column;
+  will-change: transform;
 }
 
 .note:active {

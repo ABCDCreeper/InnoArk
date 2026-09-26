@@ -2,6 +2,8 @@
 import { nextTick, onBeforeUnmount, ref } from 'vue'
 import { NButton, NInput, NText } from 'naive-ui'
 import { SendOutline } from '@vicons/ionicons5'
+import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import { fetchProjects } from '../api/project'
 import { fetchFocusStats } from '../api/focus'
 import { fetchQuizStats } from '../api/quiz'
@@ -76,15 +78,15 @@ async function answerProgress(): Promise<string> {
   const lines = items.map((p) => {
     const percent = pct(p.progress.done, p.progress.total)
     const status = p.status === 'finished' ? '已结题 ✅' : percent >= 50 ? '进展顺利 🔥' : '正在推进 💪'
-    return `· 《${p.name}》任务进度 ${p.progress.done}/${p.progress.total}（${percent}%），${status}`
+    return `- 《${p.name}》任务进度 ${p.progress.done}/${p.progress.total}（${percent}%），${status}`
   })
-  return `你现在共参与 ${items.length} 个项目：\n${lines.join('\n')}\n建议打开项目详情的任务看板，认领一个「待认领」任务继续推进。`
+  return `你现在共参与 ${items.length} 个项目：\n\n${lines.join('\n')}\n\n建议打开项目详情的任务看板，认领一个「待认领」任务继续推进。`
 }
 
 function answerWrong(): string {
   const book = growth.wrongBook
   if (book.length === 0) return '你的错题本是空的，太棒了！保持现在的节奏，去闯关拿更高分吧 🏆'
-  const recent = book.slice(0, 2).map((w) => `· 「${w.question.slice(0, 26)}${w.question.length > 26 ? '…' : ''}」`).join('\n')
+  const recent = book.slice(0, 2).map((w) => `- 「${w.question.slice(0, 26)}${w.question.length > 26 ? '…' : ''}」`).join('\n')
   return `错题本里目前有 ${book.length} 道题待消灭。最近记下的：\n${recent}\n建议先读一遍解析再回闯关页重做，把同类题一次吃透 📝`
 }
 
@@ -128,12 +130,14 @@ function answerSign(): string {
   return `${head}\n你累计签到 ${growth.signDays} 天，本月已签 ${growth.monthSigns.length} 天。`
 }
 
-const INTRO = '我是智创方舟的 AI 助教小智 🤖 我接入了平台的学习数据，可以帮你：\n· 查项目进度与任务建议\n· 分析错题本\n· 汇总专注报告\n· 查询排行榜名次\n· 制定学习建议\n直接点下方的快捷问题，或随便问我！'
+const INTRO = '我是智创方舟的 AI 助教小智 🤖 我接入了平台的学习数据，可以帮你：\n- 查项目进度与任务建议\n- 分析错题本\n- 汇总专注报告\n- 查询排行榜名次\n- 制定学习建议\n\n直接点下方的快捷问题，或随便问我！'
 
 function encourage(): string {
   return pickOne(ENCOURAGEMENTS)
 }
-
+function renderMd(text: string): string {
+  return DOMPurify.sanitize(marked.parse(text, { async: false }) as string)
+}
 async function composeAnswer(q: string): Promise<string> {
   if (/(进度|项目)/.test(q)) return answerProgress()
   if (/(错题)/.test(q)) return answerWrong()
@@ -192,13 +196,13 @@ async function ask(text: string) {
 
       <div ref="listRef" class="ai-list">
         <div v-for="(m, i) in messages" :key="i" class="ai-msg" :class="m.role">
-          <div class="ai-bubble">{{ m.text }}</div>
-        </div>
+          <div class="ai-bubble" v-html="m.role === 'ai' ? renderMd(m.text) : m.text"></div>
+      </div>
         <div v-if="busy" class="ai-msg ai"><div class="ai-bubble typing">…</div></div>
       </div>
 
       <div class="ai-chips">
-        <button v-for="q in QUICK_QUESTIONS" :key="q" class="ai-chip" @click="ask(q)">{{ q }}</button>
+        <button v-for="q in QUICK_QUESTIONS" :key="q" class="ai-chip" :disabled="typing" @click="ask(q)">{{ q }}</button>
       </div>
 
       <div class="ai-input-row">
@@ -206,6 +210,7 @@ async function ask(text: string) {
           v-model:value="draft"
           size="small"
           placeholder="问小智点什么…"
+          :disabled="typing || busy"
           @keydown.enter="ask(draft)"
         />
         <n-button size="small" type="primary" :loading="busy" @click="ask(draft)">
@@ -254,6 +259,10 @@ async function ask(text: string) {
   background: var(--n-color, #fff);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
   overflow: hidden;
+  color: var(--n-text-color, #333);
+  color: var(--n-text-color, #333);
+  --n-text-color: #333;
+  --n-placeholder-color: #999;
 }
 
 .ai-head {
@@ -309,8 +318,38 @@ async function ask(text: string) {
   border-radius: 12px;
   font-size: 13px;
   line-height: 1.65;
-  white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* 用户气泡保持换行 */
+.ai-msg.user .ai-bubble {
+  white-space: pre-wrap;
+}
+
+/* AI 气泡：渲染 Markdown 后去掉多余间距 */
+.ai-msg.ai .ai-bubble p {
+  margin: 0 0 6px;
+}
+
+.ai-msg.ai .ai-bubble p:last-child {
+  margin-bottom: 0;
+}
+
+.ai-msg.ai .ai-bubble ul,
+.ai-msg.ai .ai-bubble ol {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.ai-msg.ai .ai-bubble li {
+  margin: 2px 0;
+}
+
+.ai-msg.ai .ai-bubble code {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 12px;
 }
 
 .ai-msg.ai .ai-bubble {
@@ -354,12 +393,29 @@ async function ask(text: string) {
   border-color: #2080f0;
   color: #2080f0;
 }
+.ai-chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 .ai-input-row {
   display: flex;
   gap: 8px;
   padding: 10px 12px;
 }
+
+/* 输入框文字和 placeholder 强制改色 */
+.ai-input-row :deep(.n-input__input-el),
+.ai-input-row :deep(.n-input__placeholder),
+.ai-input-row :deep(.n-input__mirror),
+.ai-input-row :deep(input) {
+  color: #333 !important;
+}
+
+.ai-input-row :deep(.n-input__placeholder) {
+  color: #999 !important;
+}
+
 
 .ai-pop-enter-active,
 .ai-pop-leave-active {

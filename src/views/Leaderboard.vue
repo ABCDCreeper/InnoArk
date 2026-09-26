@@ -46,6 +46,7 @@ function myRank() {
   const idx = items.value.findIndex(isMe)
   return idx === -1 ? null : idx + 1
 }
+const myItem = computed(() => items.value.find(isMe) ?? null)
 </script>
 
 <template>
@@ -99,6 +100,13 @@ function myRank() {
         </n-card>
       </template>
     </n-spin>
+      <div v-if="myItem && myRank() && myRank()! > 3" class="my-rank-bar">
+        <span class="my-rank-label">我的名次</span>
+        <span class="my-rank-num">第 {{ myRank() }} 名</span>
+        <span class="my-rank-divider">·</span>
+        <span class="my-rank-score">{{ myItem.score }} 分</span>
+        <span class="my-rank-sub">⚔️ {{ myItem.quizBest }} · 🍅 {{ myItem.focusMinutes }} · ✅ {{ myItem.checkinCount }}</span>
+      </div>
   </div>
 </template>
 
@@ -224,6 +232,72 @@ function myRank() {
   white-space: nowrap;
 }
 
+.my-rank-bar {
+  position: fixed;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #18a058, #2080f0);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 6px 24px rgba(24, 160, 88, 0.4);
+  animation: rank-slide-up 0.35s ease;
+}
+
+.my-rank-label {
+  font-size: 11px;
+  opacity: 0.85;
+  font-weight: 400;
+}
+
+.my-rank-num {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.my-rank-divider {
+  opacity: 0.5;
+}
+
+.my-rank-score {
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff3b0;
+}
+
+.my-rank-sub {
+  font-size: 11px;
+  opacity: 0.85;
+  font-weight: 400;
+}
+
+@keyframes rank-slide-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (max-width: 640px) {
+  .my-rank-sub {
+    display: none;
+  }
+  .my-rank-bar {
+    bottom: 80px;
+    padding: 8px 16px;
+  }
+}
 @media (max-width: 640px) {
   .lb-stat {
     display: none;

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
-import { NButton, NSpace, NModal, NInput, NIcon, NEmpty, NText } from 'naive-ui'
+import { NButton, NSpace, NModal, NInput, NIcon, NEmpty, NText, NPopconfirm } from 'naive-ui'
 import { AddOutline, CreateOutline, TrashOutline, RemoveOutline, RefreshOutline } from '@vicons/ionicons5'
 import type { MindNode } from '../api/types'
+
 
 const props = defineProps<{
   nodes: MindNode[]
@@ -204,10 +205,15 @@ function selectNode(id: string) {
             <template #icon><n-icon><create-outline /></n-icon></template>
             重命名
           </n-button>
-          <n-button size="small" type="error" ghost @click="confirmRemove">
-            <template #icon><n-icon><trash-outline /></n-icon></template>
-            删除（含子节点）
-          </n-button>
+          <n-popconfirm @positive-click="confirmRemove">
+            <template #trigger>
+              <n-button size="small" type="error" ghost>
+                <template #icon><n-icon><trash-outline /></n-icon></template>
+                删除（含子节点）
+              </n-button>
+            </template>
+            删除后该节点及其所有子节点都会消失，确定吗？
+          </n-popconfirm>
         </template>
       </n-space>
     </n-space>
