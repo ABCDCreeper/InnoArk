@@ -4,7 +4,6 @@ import { NButton, NSpace, NModal, NInput, NIcon, NEmpty, NText, NPopconfirm } fr
 import { AddOutline, CreateOutline, TrashOutline, RemoveOutline, RefreshOutline } from '@vicons/ionicons5'
 import type { MindNode } from '../api/types'
 
-
 const props = defineProps<{
   nodes: MindNode[]
   editable: boolean

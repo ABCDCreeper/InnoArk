@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { NCard, NRadioGroup, NRadioButton, NSpin, NText, NEmpty } from 'naive-ui'
+import { NCard, NRadioGroup, NRadioButton, NSpin, NText, NEmpty, useMessage } from 'naive-ui'
 import { fetchLeaderboard } from '../api/leaderboard'
 import { ApiError } from '../api/request'
 import { useAuthStore } from '../stores/auth'
-import { useMessage } from 'naive-ui'
 import type { LeaderboardItem } from '../api/types'
 
 const auth = useAuthStore()
@@ -100,13 +99,13 @@ const myItem = computed(() => items.value.find(isMe) ?? null)
         </n-card>
       </template>
     </n-spin>
-      <div v-if="myItem && myRank() && myRank()! > 3" class="my-rank-bar">
-        <span class="my-rank-label">我的名次</span>
-        <span class="my-rank-num">第 {{ myRank() }} 名</span>
-        <span class="my-rank-divider">·</span>
-        <span class="my-rank-score">{{ myItem.score }} 分</span>
-        <span class="my-rank-sub">⚔️ {{ myItem.quizBest }} · 🍅 {{ myItem.focusMinutes }} · ✅ {{ myItem.checkinCount }}</span>
-      </div>
+    <div v-if="myItem && myRank() && myRank()! > 3" class="my-rank-bar">
+      <span class="my-rank-label">我的名次</span>
+      <span class="my-rank-num">第 {{ myRank() }} 名</span>
+      <span class="my-rank-divider">·</span>
+      <span class="my-rank-score">{{ myItem.score }} 分</span>
+      <span class="my-rank-sub">⚔️ {{ myItem.quizBest }} · 🍅 {{ myItem.focusMinutes }} · ✅ {{ myItem.checkinCount }}</span>
+    </div>
   </div>
 </template>
 
@@ -293,12 +292,12 @@ const myItem = computed(() => items.value.find(isMe) ?? null)
   .my-rank-sub {
     display: none;
   }
+
   .my-rank-bar {
     bottom: 80px;
     padding: 8px 16px;
   }
-}
-@media (max-width: 640px) {
+
   .lb-stat {
     display: none;
   }
