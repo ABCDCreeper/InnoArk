@@ -153,7 +153,6 @@ const isMobile = ref(false)
 const mobileMenuOpen = ref(false)
 const siderCollapsed = ref(false)
 
-// —— Ctrl+K 全局命令面板 ——
 const showCmd = ref(false)
 const cmdQuery = ref('')
 const cmdProjects = ref<Project[]>([])

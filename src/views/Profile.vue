@@ -43,7 +43,6 @@ const xpPct = computed(() => {
 
 const totalCards = CARD_SETS.reduce((sum, s) => sum + cardsOfSet(s.id).length, 0)
 
-// —— 本周学习周报：汇总专注 / 闯关 / 签到 ——
 const weekReport = computed(() => {
   const weekAgo = Date.now() - 7 * 86400000
   const recentQuiz = (quizStats.value?.recent ?? []).filter((a) => new Date(a.createdAt).getTime() >= weekAgo)

@@ -70,8 +70,6 @@ function pct(done: number, total: number) {
   return total === 0 ? 0 : Math.round((done / total) * 100)
 }
 
-// —— 各意图的回答生成（数据来自 mock 接口与本地 store） ——
-
 async function answerProgress(): Promise<string> {
   const res = await fetchProjects()
   const items = res.items
@@ -320,7 +318,6 @@ async function ask(text: string) {
   word-break: break-word;
 }
 
-/* 用户气泡保持换行 */
 .ai-msg.user .ai-bubble {
   white-space: pre-wrap;
 }

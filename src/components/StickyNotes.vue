@@ -66,7 +66,7 @@ function onPointerMove(e: PointerEvent) {
   const rect = cachedRect
   dragX = Math.max(0, Math.min(e.clientX - rect.left - dragOffset.value.dx, rect.width - 180))
   dragY = Math.max(0, Math.min(e.clientY - rect.top - dragOffset.value.dy, rect.height - 120))
-  // 关键：直接改 DOM，绕过 Vue，流畅到飞起
+  // 拖拽中直接写 DOM，避免每帧触发响应式重排
   dragEl.style.transform = `translate(${dragX}px, ${dragY}px)`
 }
 
