@@ -739,7 +739,7 @@ const routes: Array<{ method: string | string[]; pattern: RegExp; handler: Handl
           checkins: ctx.db.checkins.filter((c) => c.projectId === project.id),
           feedbacks: ctx.db.feedbacks.filter((f) => f.projectId === project.id),
           mindNodes: ctx.db.mindNodes.filter((n) => n.projectId === project.id),
-          annotations: ctx.db.annotations.filter((a) => a.projectId === project.id),
+          annotations: ctx.db.annotations.filter((a) => a.projectId === project.id).map((a) => annotationView(ctx.db, a)),
         },
       }
     },

@@ -222,7 +222,7 @@ function formatTime(iso: string) {
           <n-timeline-item
             v-for="a in archive.annotations"
             :key="a.id"
-            :title="archive.members.find((m) => m.user.id === a.userId)?.user.name ?? '教师'"
+            :title="a.name ?? '教师'"
             :content="a.content"
             :time="formatTime(a.createdAt)"
             type="warning"
