@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref } from 'vue'
-import { NButton, NInput, NText } from 'naive-ui'
+import { NButton, NInput, NText, useThemeVars } from 'naive-ui'
 import { SendOutline } from '@vicons/ionicons5'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
@@ -17,6 +17,7 @@ interface Msg { role: 'ai' | 'user'; text: string }
 const growth = useGrowthStore()
 const learn = useLearnStore()
 const auth = useAuthStore()
+const themeVars = useThemeVars()
 
 const open = ref(false)
 const draft = ref('')
@@ -186,7 +187,7 @@ async function ask(text: string) {
 
   <!-- 对话面板 -->
   <transition name="ai-pop">
-    <div v-if="open" class="ai-panel">
+    <div v-if="open" class="ai-panel" :style="{ backgroundColor: themeVars.cardColor, color: themeVars.textColor1 }">
       <div class="ai-head">
         <span class="ai-avatar">🤖</span>
         <div class="ai-head-text">
@@ -259,7 +260,6 @@ async function ask(text: string) {
   flex-direction: column;
   border-radius: 16px;
   border: 1px solid rgba(128, 128, 128, 0.3);
-  background: var(--n-color, #fff);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
   overflow: hidden;
 }
